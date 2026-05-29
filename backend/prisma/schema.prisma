@@ -1,0 +1,635 @@
+// =============================================================================
+// Portal RH — PostgreSQL schema (multi-tenant SaaS, RLS-ready)
+// Every tenant-owned row includes tenantId. See prisma/RLS.md for policies.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DISABLED
+}
+
+enum OnboardingStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum DocumentStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum DocumentCategory {
+  PERSONAL_DOCUMENT
+  CONTRACT
+  PAYSLIP
+  INTERNAL_COMMUNICATION
+  ONBOARDING
+  OTHER
+}
+
+enum HRRequestStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_EMPLOYEE
+  RESOLVED
+  CLOSED
+}
+
+enum HRRequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PointDayStatus {
+  NORMAL
+  INCOMPLETE
+  HOLIDAY
+  ABSENCE
+}
+
+enum PointAdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PermissionModule {
+  DASHBOARD
+  USERS
+  ONBOARDING
+  DOCUMENTS
+  COMMUNICATION
+  POINT
+  ADMINISTRATION
+  AUDIT
+}
+
+enum PermissionAction {
+  VIEW
+  CREATE
+  EDIT
+  DELETE
+  APPROVE
+  REJECT
+  DOWNLOAD
+  UPLOAD
+  MANAGE
+}
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  PASSWORD_RESET_REQUEST
+  USER_CREATED
+  USER_UPDATED
+  USER_DISABLED
+  ROLE_CREATED
+  ROLE_UPDATED
+  PERMISSION_CHANGED
+  ONBOARDING_SUBMITTED
+  ONBOARDING_APPROVED
+  ONBOARDING_REJECTED
+  DOCUMENT_UPLOADED
+  DOCUMENT_DOWNLOADED
+  DOCUMENT_APPROVED
+  DOCUMENT_REJECTED
+  DOCUMENT_DELETED
+  HR_REQUEST_CREATED
+  HR_REQUEST_STATUS_CHANGED
+  POINT_ADJUSTMENT_REQUESTED
+  POINT_ADJUSTMENT_APPROVED
+  POINT_ADJUSTMENT_REJECTED
+  TENANT_CREATED
+  TENANT_UPDATED
+  CROSS_TENANT_ACCESS_ATTEMPT
+}
+
+enum DocumentAccessLevel {
+  PRIVATE
+  HR
+  MANAGER
+  COMPANY
+}
+
+enum SystemSettingScope {
+  GLOBAL
+  TENANT
+}
+
+// ─── 1. Tenant / Company ─────────────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  legalName String?
+  taxId     String? /// CNPJ — encrypt at application layer if stored
+  logoUrl   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                         User[]
+  roles                         Role[]
+  userRoles                     UserRole[]
+  employeeProfiles              EmployeeProfile[]
+  onboardingProcesses           OnboardingProcess[]
+  onboardingDocumentRequirements OnboardingDocumentRequirement[]
+  onboardingDocumentSubmissions OnboardingDocumentSubmission[]
+  documents                     Document[]
+  hrRequests                    HRRequest[]
+  hrRequestMessages             HRRequestMessage[]
+  pointRecords                  PointRecord[]
+  pointAdjustments              PointAdjustmentRequest[]
+  notifications                 Notification[]
+  auditLogs                     AuditLog[]
+  systemSettings                SystemSetting[]
+  refreshTokens                 RefreshToken[]
+
+  @@index([isActive])
+  @@map("tenants")
+}
+
+// ─── 4. Permission (global catalog) ─────────────────────────────────────────
+
+model Permission {
+  id     String           @id /// e.g. "users.view"
+  module PermissionModule
+  action PermissionAction
+  label  String
+  description String?
+
+  rolePermissions RolePermission[]
+
+  @@unique([module, action])
+  @@index([module])
+  @@map("permissions")
+}
+
+// ─── 3. Role (tenant-scoped; Super Admin is system + global) ─────────────────
+
+model Role {
+  id          String   @id @default(uuid())
+  tenantId    String?  /// null only for immutable system roles
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) /// true = cannot delete (Super Administrator)
+  isGlobal    Boolean  @default(false) /// true = cross-tenant operations allowed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([isSystem])
+  @@map("roles")
+}
+
+// ─── 5. RolePermission ───────────────────────────────────────────────────────
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// ─── 2. User (auth identity; minimal PII) ────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  name         String
+  status       UserStatus @default(INVITED)
+  avatarUrl    String?
+  lastLoginAt  DateTime?
+  mfaEnabled   Boolean    @default(false)
+  invitedAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles    UserRole[]
+  employeeProfile EmployeeProfile?
+  refreshTokens   RefreshToken[]
+  documents       Document[]
+  onboardingProcesses OnboardingProcess[]
+  onboardingReviews   OnboardingProcess[] @relation("OnboardingReviewer")
+  hrRequestsAsRequester HRRequest[]       @relation("HRRequestRequester")
+  hrRequestsAsAssignee  HRRequest[]       @relation("HRRequestAssignee")
+  hrMessages      HRRequestMessage[]
+  pointRecords    PointRecord[]
+  pointAdjustments PointAdjustmentRequest[] @relation("PointAdjustmentEmployee")
+  pointReviews    PointAdjustmentRequest[] @relation("PointAdjustmentReviewer")
+  notifications Notification[]
+  auditLogsAsActor  AuditLog[] @relation("AuditActor")
+  auditLogsAsTarget AuditLog[] @relation("AuditTarget")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+// ─── 6. UserRole (dynamic RBAC assignment per tenant) ────────────────────────
+
+model UserRole {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String
+  roleId     String
+  isPrimary  Boolean  @default(false)
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, roleId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tenantId  String
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─── 7. EmployeeProfile (LGPD-sensitive labor / personal data) ─────────────────
+
+model EmployeeProfile {
+  id               String    @id @default(uuid())
+  tenantId         String
+  userId           String    @unique
+  /// Application-layer AES-GCM; never expose in list APIs
+  cpfEncrypted     String
+  cpfHash          String
+  phoneEncrypted   String?
+  addressEncrypted String?
+  birthDate        DateTime? @db.Date
+  department       String?
+  jobTitle         String?
+  hireDate         DateTime? @db.Date
+  managerUserId    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, cpfHash])
+  @@index([tenantId])
+  @@index([tenantId, department])
+  @@map("employee_profiles")
+}
+
+// ─── 9. OnboardingDocumentRequirement (tenant-parametrized types) ────────────
+
+model OnboardingDocumentRequirement {
+  id          String           @id @default(uuid())
+  tenantId    String
+  code        String /// RG, CPF, ADDRESS, WORK_CARD, CONTRACT, OTHER
+  label       String
+  description String?
+  category    DocumentCategory @default(PERSONAL_DOCUMENT)
+  isRequired  Boolean          @default(true)
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  tenant      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submissions OnboardingDocumentSubmission[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@map("onboarding_document_requirements")
+}
+
+// ─── 8. OnboardingProcess ────────────────────────────────────────────────────
+
+model OnboardingProcess {
+  id              String           @id @default(uuid())
+  tenantId        String
+  userId          String
+  status          OnboardingStatus @default(DRAFT)
+  progressPercent Int              @default(0)
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  rejectionReason String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  tenant      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy  User?                        @relation("OnboardingReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  submissions OnboardingDocumentSubmission[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("onboarding_processes")
+}
+
+// ─── 10. OnboardingDocumentSubmission ────────────────────────────────────────
+
+model OnboardingDocumentSubmission {
+  id              String         @id @default(uuid())
+  tenantId        String
+  processId       String
+  requirementId   String
+  status          DocumentStatus @default(PENDING)
+  documentId      String?
+  rejectionReason String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  tenant      Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  process     OnboardingProcess           @relation(fields: [processId], references: [id], onDelete: Cascade)
+  requirement OnboardingDocumentRequirement @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+  document    Document?                   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@unique([processId, requirementId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([processId])
+  @@map("onboarding_document_submissions")
+}
+
+// ─── 11. Document (metadata only; files in object storage) ───────────────────
+
+model Document {
+  id               String              @id @default(uuid())
+  tenantId         String
+  userId           String
+  name             String
+  category         DocumentCategory
+  status           DocumentStatus      @default(PENDING)
+  accessLevel      DocumentAccessLevel @default(PRIVATE)
+  currentVersion   Int                 @default(1)
+  mimeType         String?
+  sizeBytes        Int?
+  expiresAt        DateTime?
+  rejectionReason  String?
+  uploadedAt       DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  tenant              Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions            DocumentVersion[]
+  onboardingSubmissions OnboardingDocumentSubmission[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([tenantId, deletedAt])
+  @@map("documents")
+}
+
+// ─── 12. DocumentVersion ─────────────────────────────────────────────────────
+
+model DocumentVersion {
+  id               String   @id @default(uuid())
+  documentId       String
+  version          Int
+  storageKey       String   /// Object key — never store public URL
+  originalFilename String?
+  mimeType         String?
+  checksum         String?
+  sizeBytes        Int?
+  uploadedBy       String?
+  createdAt        DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@map("document_versions")
+}
+
+// ─── 13. HRRequest ───────────────────────────────────────────────────────────
+
+model HRRequest {
+  id           String            @id @default(uuid())
+  tenantId     String
+  requesterId  String
+  subject      String
+  category     String
+  status       HRRequestStatus   @default(OPEN)
+  priority     HRRequestPriority @default(MEDIUM)
+  assignedToId String?
+  resolvedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester User               @relation("HRRequestRequester", fields: [requesterId], references: [id])
+  assignee  User?              @relation("HRRequestAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages  HRRequestMessage[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([requesterId])
+  @@index([createdAt])
+  @@map("hr_requests")
+}
+
+// ─── 14. HRRequestMessage ────────────────────────────────────────────────────
+
+model HRRequestMessage {
+  id         String   @id @default(uuid())
+  tenantId   String
+  requestId  String
+  authorId   String
+  body       String
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  tenant  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  request HRRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id])
+
+  @@index([tenantId])
+  @@index([requestId])
+  @@index([createdAt])
+  @@map("hr_request_messages")
+}
+
+// ─── 15. Notification ────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, read])
+  @@index([tenantId, createdAt])
+  @@map("notifications")
+}
+
+// ─── 16. PointRecord (mirror only — no clock-in/out in V1) ───────────────────
+
+model PointRecord {
+  id         String         @id @default(uuid())
+  tenantId   String
+  userId     String
+  date       DateTime       @db.Date
+  entries    Json           /// [{ type, time }]
+  totalHours String?
+  status     PointDayStatus @default(NORMAL)
+  externalId String?
+  syncedAt   DateTime?
+  createdAt  DateTime       @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, date])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([date])
+  @@map("point_records")
+}
+
+// ─── 17. PointAdjustmentRequest ──────────────────────────────────────────────
+
+model PointAdjustmentRequest {
+  id               String                @id @default(uuid())
+  tenantId         String
+  userId           String
+  date             DateTime              @db.Date
+  reason           String
+  requestedChanges String
+  status           PointAdjustmentStatus @default(PENDING)
+  reviewedById     String?
+  reviewComment    String?
+  reviewedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User   @relation("PointAdjustmentEmployee", fields: [userId], references: [id])
+  reviewedBy User?  @relation("PointAdjustmentReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("point_adjustment_requests")
+}
+
+// ─── 18. AuditLog ────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String            @id @default(uuid())
+  tenantId     String
+  actorUserId  String?
+  targetUserId String?
+  module       PermissionModule?
+  action       AuditAction
+  entityType   String?
+  entityId     String?
+  metadata     Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime          @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User?  @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  target User?  @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+  @@index([tenantId, module])
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ─── 19. SystemSetting ─────────────────────────────────────────────────────
+
+model SystemSetting {
+  id        String             @id @default(uuid())
+  tenantId  String?            /// null = GLOBAL scope
+  scope     SystemSettingScope
+  key       String
+  value     Json
+  isSecret  Boolean            @default(false)
+  updatedAt DateTime           @updatedAt
+  createdAt DateTime           @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([scope, tenantId, key])
+  @@index([tenantId])
+  @@map("system_settings")
+}

@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 33% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 25% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 20% 94%;
+    --muted-foreground: 215 16% 42%;
+    --accent: 221 90% 96%;
+    --accent-foreground: 221 83% 40%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 20% 90%;
+    --input: 220 20% 90%;
+    --ring: 221 83% 53%;
+    --radius: 0.625rem;
+
+    --sidebar: 222 47% 11%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-muted: 215 20% 55%;
+    --sidebar-accent: 221 83% 53%;
+    --sidebar-border: 222 30% 18%;
+
+    --success: 152 69% 31%;
+    --success-bg: 152 76% 94%;
+    --warning: 38 92% 40%;
+    --warning-bg: 48 96% 93%;
+    --info: 221 83% 53%;
+    --info-bg: 221 90% 96%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+}
+
+@layer components {
+  .portal-shell-bg {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(221 83% 53% / 0.08), transparent),
+      radial-gradient(circle at 100% 0%, hsl(221 83% 53% / 0.04), transparent 40%);
+  }
+
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-md border border-border/60 shadow-elevated;
+  }
+
+  .sidebar-nav-active {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--sidebar-accent) / 0.22) 0%,
+      hsl(var(--sidebar-accent) / 0.08) 100%
+    );
+    box-shadow: inset 3px 0 0 0 hsl(var(--sidebar-accent));
+  }
+
+  .auth-gradient-panel {
+    background:
+      linear-gradient(145deg, hsl(222 47% 11%) 0%, hsl(221 50% 22%) 45%, hsl(221 83% 40%) 100%);
+  }
+
+  .auth-grid-pattern {
+    background-image:
+      linear-gradient(hsl(0 0% 100% / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(0 0% 100% / 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .stat-card-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card-shine::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+@layer utilities {
+  .shadow-elevated {
+    box-shadow:
+      0 1px 2px hsl(222 47% 11% / 0.04),
+      0 4px 12px hsl(222 47% 11% / 0.06),
+      0 12px 32px hsl(222 47% 11% / 0.04);
+  }
+
+  .shadow-soft {
+    box-shadow: 0 1px 3px hsl(222 47% 11% / 0.06), 0 2px 8px hsl(222 47% 11% / 0.04);
+  }
+
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(221 83% 45%), hsl(221 83% 58%));
+  }
+
+  .landing-hero-glow {
+    background:
+      radial-gradient(ellipse 70% 60% at 50% -10%, hsl(221 83% 53% / 0.18), transparent),
+      radial-gradient(circle at 90% 20%, hsl(221 83% 53% / 0.08), transparent 35%),
+      radial-gradient(circle at 10% 80%, hsl(221 83% 53% / 0.06), transparent 40%);
+  }
+
+  .landing-grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.6) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.6) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 85%);
+  }
+
+  .landing-mesh {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(at 27% 37%, hsl(221 83% 53% / 0.12) 0px, transparent 50%),
+      radial-gradient(at 97% 21%, hsl(221 70% 60% / 0.08) 0px, transparent 50%),
+      radial-gradient(at 52% 99%, hsl(221 83% 53% / 0.06) 0px, transparent 50%);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--sidebar-border)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--sidebar-border));
+    border-radius: 999px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
