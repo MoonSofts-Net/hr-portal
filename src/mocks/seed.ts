@@ -12,9 +12,15 @@ import type {
   User,
 } from "@/types";
 import { PERMISSION_DEFINITIONS, SUPER_ADMIN_ROLE_ID } from "@/lib/permissions/definitions";
+import {
+  ROLE_EMPLOYEE_ID,
+  ROLE_HR_ID,
+  ROLE_MANAGER_ID,
+  TENANT_MOONSOFTS_ID,
+} from "@/lib/constants/ids";
 
 export const MOCK_TENANTS: Tenant[] = [
-  { id: "tenant-1", name: "Moonsofts Tecnologia", slug: "moonsofts", isActive: true },
+  { id: TENANT_MOONSOFTS_ID, name: "Moonsofts Tecnologia", slug: "moonsofts", isActive: true },
   { id: "tenant-2", name: "Acme Brasil Ltda", slug: "acme", isActive: true },
 ];
 
@@ -32,8 +38,8 @@ export const MOCK_ROLES: Role[] = [
     updatedAt: "2024-01-01T00:00:00Z",
   },
   {
-    id: "role-hr",
-    tenantId: "tenant-1",
+    id: ROLE_HR_ID,
+    tenantId: TENANT_MOONSOFTS_ID,
     name: "HR",
     description: "Human Resources team",
     isSystem: false,
@@ -59,8 +65,8 @@ export const MOCK_ROLES: Role[] = [
     updatedAt: "2024-06-01T00:00:00Z",
   },
   {
-    id: "role-manager",
-    tenantId: "tenant-1",
+    id: ROLE_MANAGER_ID,
+    tenantId: TENANT_MOONSOFTS_ID,
     name: "Manager",
     description: "Team manager",
     isSystem: false,
@@ -78,8 +84,8 @@ export const MOCK_ROLES: Role[] = [
     updatedAt: "2024-06-01T00:00:00Z",
   },
   {
-    id: "role-employee",
-    tenantId: "tenant-1",
+    id: ROLE_EMPLOYEE_ID,
+    tenantId: TENANT_MOONSOFTS_ID,
     name: "Employee",
     description: "Standard employee access",
     isSystem: false,
@@ -103,7 +109,7 @@ export const MOCK_ROLES: Role[] = [
 export const MOCK_USERS: User[] = [
   {
     id: "user-super",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     email: "admin@portalrh.com",
     cpf: "12345678901",
     name: "Ana Super Admin",
@@ -115,11 +121,11 @@ export const MOCK_USERS: User[] = [
   },
   {
     id: "user-hr",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     email: "rh@moonsofts.com",
     cpf: "98765432100",
     name: "Carlos RH",
-    roleId: "role-hr",
+    roleId: ROLE_HR_ID,
     roleName: "HR",
     department: "Human Resources",
     status: "active",
@@ -128,11 +134,11 @@ export const MOCK_USERS: User[] = [
   },
   {
     id: "user-manager",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     email: "gestor@moonsofts.com",
     cpf: "11122233344",
     name: "Beatriz Gestora",
-    roleId: "role-manager",
+    roleId: ROLE_MANAGER_ID,
     roleName: "Manager",
     department: "Engineering",
     status: "active",
@@ -140,11 +146,11 @@ export const MOCK_USERS: User[] = [
   },
   {
     id: "user-employee",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     email: "colaborador@moonsofts.com",
     cpf: "55566677788",
     name: "Diego Colaborador",
-    roleId: "role-employee",
+    roleId: ROLE_EMPLOYEE_ID,
     roleName: "Employee",
     department: "Engineering",
     status: "active",
@@ -161,18 +167,18 @@ export const MOCK_CREDENTIALS: Record<string, string> = {
 };
 
 export const MOCK_DOCUMENT_TYPES: DocumentTypeConfig[] = [
-  { id: "dt-rg", tenantId: "tenant-1", code: "RG", label: "RG (Identity)", required: true, category: "personal" },
-  { id: "dt-cpf", tenantId: "tenant-1", code: "CPF", label: "CPF", required: true, category: "personal" },
-  { id: "dt-address", tenantId: "tenant-1", code: "ADDRESS", label: "Proof of address", required: true, category: "personal" },
-  { id: "dt-workcard", tenantId: "tenant-1", code: "WORK_CARD", label: "Work card", required: true, category: "personal" },
-  { id: "dt-contract", tenantId: "tenant-1", code: "CONTRACT", label: "Contract", required: false, category: "contracts" },
-  { id: "dt-other", tenantId: "tenant-1", code: "OTHER", label: "Other", required: false, category: "other" },
+  { id: "dt-rg", tenantId: TENANT_MOONSOFTS_ID, code: "RG", label: "RG (Identity)", required: true, category: "personal" },
+  { id: "dt-cpf", tenantId: TENANT_MOONSOFTS_ID, code: "CPF", label: "CPF", required: true, category: "personal" },
+  { id: "dt-address", tenantId: TENANT_MOONSOFTS_ID, code: "ADDRESS", label: "Proof of address", required: true, category: "personal" },
+  { id: "dt-workcard", tenantId: TENANT_MOONSOFTS_ID, code: "WORK_CARD", label: "Work card", required: true, category: "personal" },
+  { id: "dt-contract", tenantId: TENANT_MOONSOFTS_ID, code: "CONTRACT", label: "Contract", required: false, category: "contracts" },
+  { id: "dt-other", tenantId: TENANT_MOONSOFTS_ID, code: "OTHER", label: "Other", required: false, category: "other" },
 ];
 
 export const MOCK_DOCUMENTS: Document[] = [
   {
     id: "doc-1",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-employee",
     name: "RG - Diego Colaborador.pdf",
     category: "personal",
@@ -184,7 +190,7 @@ export const MOCK_DOCUMENTS: Document[] = [
   },
   {
     id: "doc-2",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-employee",
     name: "Holerite Março 2026.pdf",
     category: "payslips",
@@ -198,7 +204,7 @@ export const MOCK_DOCUMENTS: Document[] = [
 export const MOCK_ONBOARDING: OnboardingSubmission[] = [
   {
     id: "onb-1",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-employee",
     userName: "Diego Colaborador",
     status: "under_review",
@@ -231,7 +237,7 @@ export const MOCK_ONBOARDING: OnboardingSubmission[] = [
 export const MOCK_HR_REQUESTS: HRRequest[] = [
   {
     id: "req-1",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     requesterId: "user-employee",
     requesterName: "Diego Colaborador",
     subject: "Vacation balance inquiry",
@@ -262,7 +268,7 @@ export const MOCK_HR_REQUESTS: HRRequest[] = [
   },
   {
     id: "req-2",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     requesterId: "user-employee",
     requesterName: "Diego Colaborador",
     subject: "Update bank details",
@@ -287,7 +293,7 @@ export const MOCK_HR_REQUESTS: HRRequest[] = [
 export const MOCK_POINT_RECORDS: PointRecord[] = [
   {
     id: "pt-1",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-employee",
     date: "2026-05-26",
     entries: [
@@ -301,7 +307,7 @@ export const MOCK_POINT_RECORDS: PointRecord[] = [
   },
   {
     id: "pt-2",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-employee",
     date: "2026-05-27",
     entries: [
@@ -316,7 +322,7 @@ export const MOCK_POINT_RECORDS: PointRecord[] = [
 export const MOCK_POINT_ADJUSTMENTS: PointAdjustmentRequest[] = [
   {
     id: "adj-1",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-employee",
     userName: "Diego Colaborador",
     date: "2026-05-27",
@@ -330,7 +336,7 @@ export const MOCK_POINT_ADJUSTMENTS: PointAdjustmentRequest[] = [
 export const MOCK_AUDIT_LOGS: AuditLog[] = [
   {
     id: "audit-1",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     tenantName: "Moonsofts Tecnologia",
     userId: "user-hr",
     userName: "Carlos RH",
@@ -341,7 +347,7 @@ export const MOCK_AUDIT_LOGS: AuditLog[] = [
   },
   {
     id: "audit-2",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     tenantName: "Moonsofts Tecnologia",
     userId: "user-employee",
     userName: "Diego Colaborador",
@@ -352,7 +358,7 @@ export const MOCK_AUDIT_LOGS: AuditLog[] = [
   },
   {
     id: "audit-3",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     tenantName: "Moonsofts Tecnologia",
     userId: "user-hr",
     userName: "Carlos RH",
@@ -363,19 +369,19 @@ export const MOCK_AUDIT_LOGS: AuditLog[] = [
   },
   {
     id: "audit-4",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     tenantName: "Moonsofts Tecnologia",
     userId: "user-super",
     userName: "Ana Super Admin",
     module: "administration",
     action: "permission_update",
-    resource: "role-hr",
+    resource: ROLE_HR_ID,
     metadata: "Added documents.manage",
     createdAt: "2026-05-15T10:00:00Z",
   },
   {
     id: "audit-5",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     tenantName: "Moonsofts Tecnologia",
     userId: "user-super",
     userName: "Ana Super Admin",
@@ -389,7 +395,7 @@ export const MOCK_AUDIT_LOGS: AuditLog[] = [
 export const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: "notif-1",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-employee",
     title: "Document rejected",
     body: "Your work card upload was rejected. Please resubmit.",
@@ -399,7 +405,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
   },
   {
     id: "notif-2",
-    tenantId: "tenant-1",
+    tenantId: TENANT_MOONSOFTS_ID,
     userId: "user-hr",
     title: "New onboarding submission",
     body: "Diego Colaborador submitted onboarding for review.",

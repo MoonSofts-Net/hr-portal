@@ -1,10 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
+import { IsDatabaseUuid } from '../../../common/validators/database-uuid.validator';
 
 export class CreateOnboardingDto {
   @ApiPropertyOptional({ description: 'Target user (HR only). Defaults to current user.' })
   @IsOptional()
-  @IsUUID()
+  @IsDatabaseUuid()
   userId?: string;
 
   @ApiPropertyOptional()

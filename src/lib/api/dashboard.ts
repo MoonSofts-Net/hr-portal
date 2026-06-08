@@ -1,3 +1,4 @@
+import { ROLE_HR_ID, ROLE_MANAGER_ID } from "@/lib/constants/ids";
 import { apiRequest } from "./client";
 import { isSuperAdmin } from "./auth";
 import type { DashboardStats } from "@/types";
@@ -26,8 +27,8 @@ export async function getDashboardStats(
       };
     }
 
-    const hasHrPerms = context.userId === "user-hr" || roleId === "role-hr";
-    const hasManagerPerms = roleId === "role-manager";
+    const hasHrPerms = context.userId === "user-hr" || roleId === ROLE_HR_ID;
+    const hasManagerPerms = roleId === ROLE_MANAGER_ID;
 
     if (hasHrPerms) {
       const pendingOnboarding = MOCK_ONBOARDING.filter(

@@ -11,5 +11,14 @@ export function useMockApi(): boolean {
 }
 
 export function getApiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1").replace(/\/$/, "");
+  const configured = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+  if (configured.startsWith("/")) {
+    const path = configured.replace(/\/$/, "");
+    if (typeof window !== "undefined") return path;
+    const backend = (process.env.BACKEND_URL ?? "http://localhost:3001").replace(/\/$/, "");
+    return `${backend}${path}`;
+  }
+
+  return configured.replace(/\/$/, "");
 }

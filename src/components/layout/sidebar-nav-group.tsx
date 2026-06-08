@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PlatformIcons } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/hooks/use-translations";
 import type { NavItem } from "@/lib/navigation";
 
 interface SidebarNavGroupProps {
@@ -22,6 +23,8 @@ export function SidebarNavGroup({
   onNavigate,
 }: SidebarNavGroupProps) {
   const pathname = usePathname();
+  const { t } = useTranslations();
+  const label = t(item.labelKey);
   const Icon = item.icon;
 
   return (
@@ -46,19 +49,19 @@ export function SidebarNavGroup({
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-200",
               isActive
-                ? "bg-primary/20 text-primary"
+                ? "bg-[hsl(var(--brand-yellow)/0.22)] text-[hsl(var(--brand-yellow))]"
                 : "bg-sidebar-border/30 text-sidebar-muted group-hover:bg-sidebar-border/50 group-hover:text-sidebar-foreground"
             )}
           >
             <Icon className="h-[18px] w-[18px]" />
           </span>
-          <span className="flex-1 truncate">{item.label}</span>
+          <span className="flex-1 truncate">{label}</span>
         </Link>
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={isExpanded}
-          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.label}`}
+          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${label}`}
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-300",
             "text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-border/50",
@@ -101,12 +104,12 @@ export function SidebarNavGroup({
                   className={cn(
                     "flex items-center gap-[8px] rounded-md px-[10px] py-[8px] text-xs font-medium transition-all duration-200",
                     childActive
-                      ? "text-primary bg-primary/10"
+                      ? "text-[hsl(var(--brand-yellow))] bg-[hsl(var(--brand-yellow)/0.12)]"
                       : "text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-border/30"
                   )}
                 >
                   <ChildIcon className="h-[14px] w-[14px] shrink-0 opacity-80" />
-                  {child.label}
+                  {t(child.labelKey)}
                 </Link>
               );
             })}
@@ -125,6 +128,8 @@ interface SidebarNavLinkProps {
 
 export function SidebarNavLink({ item, isActive, onNavigate }: SidebarNavLinkProps) {
   const Icon = item.icon;
+  const { t } = useTranslations();
+  const label = t(item.labelKey);
 
   return (
     <Link
@@ -141,13 +146,13 @@ export function SidebarNavLink({ item, isActive, onNavigate }: SidebarNavLinkPro
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-200",
           isActive
-            ? "bg-primary/20 text-primary"
+            ? "bg-[hsl(var(--brand-yellow)/0.22)] text-[hsl(var(--brand-yellow))]"
             : "bg-sidebar-border/30 text-sidebar-muted group-hover:bg-sidebar-border/50 group-hover:text-sidebar-foreground"
         )}
       >
         <Icon className="h-[18px] w-[18px]" />
       </span>
-      <span className="flex-1">{item.label}</span>
+      <span className="flex-1">{label}</span>
     </Link>
   );
 }

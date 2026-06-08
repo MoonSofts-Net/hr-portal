@@ -12,18 +12,22 @@ if (!port || port < 1 || port > 65535) {
 }
 
 function findPidsWindows(targetPort) {
-  const out = execSync(`netstat -ano | findstr ":${targetPort}"`, {
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'ignore'],
-  });
-  const pids = new Set();
-  for (const line of out.split('\n')) {
-    if (!line.includes('LISTENING')) continue;
-    const parts = line.trim().split(/\s+/);
-    const pid = parseInt(parts[parts.length - 1], 10);
-    if (pid > 0) pids.add(pid);
+  try {
+    const out = execSync(`netstat -ano | findstr ":${targetPort}"`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    });
+    const pids = new Set();
+    for (const line of out.split('\n')) {
+      if (!line.includes('LISTENING')) continue;
+      const parts = line.trim().split(/\s+/);
+      const pid = parseInt(parts[parts.length - 1], 10);
+      if (pid > 0) pids.add(pid);
+    }
+    return [...pids];
+  } catch {
+    return [];
   }
-  return [...pids];
 }
 
 function findPidsUnix(targetPort) {

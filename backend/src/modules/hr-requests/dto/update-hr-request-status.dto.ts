@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
+import { IsDatabaseUuid } from '../../../common/validators/database-uuid.validator';
 import { HRRequestStatus } from '@prisma/client';
 
 export class UpdateHrRequestStatusDto {
@@ -9,6 +10,6 @@ export class UpdateHrRequestStatusDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsDatabaseUuid()
   assignedToId?: string;
 }

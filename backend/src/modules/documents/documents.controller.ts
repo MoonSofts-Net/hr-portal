@@ -6,13 +6,16 @@ import {
   Param,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { DocumentsService } from './documents.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../security/interfaces/authenticated-user.interface';
@@ -20,6 +23,7 @@ import { UploadDocumentDto } from './dto/upload-document.dto';
 import { ListDocumentsQueryDto } from './dto/list-documents-query.dto';
 import { RejectDocumentDto } from './dto/reject-document.dto';
 import { RequestDownloadUrlDto } from './dto/request-download-url.dto';
+import { FileDownloadQueryDto } from './dto/file-download-query.dto';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -63,6 +67,13 @@ export class DocumentsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.service.findAll(tenantId, query, user);
+  }
+
+  @Get('file-download')
+  @Public()
+  @ApiOperation({ summary: 'Download file via short-lived signed token (local storage)' })
+  async fileDownload(@Query() query: FileDownloadQueryDto, @Res() res: Response) {
+    await this.service.streamSignedFileDownload(query, res);
   }
 
   @Get(':id')

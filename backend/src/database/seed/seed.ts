@@ -31,6 +31,7 @@ const MANAGER_PERMISSIONS = [
   'documents.read',
   'documents.download',
   'hr_requests.read',
+  'hr_requests.create',
   'hr_requests.respond',
   'point.read',
   'point.adjust.approve',

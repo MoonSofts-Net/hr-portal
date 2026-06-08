@@ -103,11 +103,15 @@ export async function apiFetch<T>(
   const json = (await res.json().catch(() => ({}))) as ApiSuccessResponse<T> | ApiErrorResponse;
 
   if (!res.ok || json.success === false) {
-    const message =
-      (json as ApiErrorResponse).message ??
-      (typeof (json as { message?: string }).message === "string"
-        ? (json as { message: string }).message
-        : `Request failed (${res.status})`);
+    const raw = json as ApiErrorResponse & { message?: string | string[] };
+    let message: string;
+    if (Array.isArray(raw.message)) {
+      message = raw.message.join(", ");
+    } else if (typeof raw.message === "string") {
+      message = raw.message;
+    } else {
+      message = `Request failed (${res.status})`;
+    }
     throw { code: "API_ERROR", message, statusCode: res.status } satisfies ApiError;
   }
 
@@ -153,7 +157,7 @@ export async function apiFetchPaginated<T>(
 export async function requestSecureDownloadUrl(
   documentId: string,
   context: RequestContext
-): Promise<{ url: string; expiresAt: string }> {
+): Promise<{ url: string; expiresAt: string; filename?: string }> {
   if (useMockApi()) {
     return apiRequest(
       () => ({
@@ -164,9 +168,14 @@ export async function requestSecureDownloadUrl(
     );
   }
 
-  const data = await apiFetch<{ downloadUrl: string; expiresAt: string }>(
-    `/documents/${documentId}/request-download-url`,
-    { method: "POST", body: JSON.stringify({}), context }
-  );
-  return { url: data.downloadUrl, expiresAt: data.expiresAt };
+  const data = await apiFetch<{
+    downloadUrl: string;
+    expiresAt: string;
+    filename?: string;
+  }>(`/documents/${documentId}/request-download-url`, {
+    method: "POST",
+    body: JSON.stringify({}),
+    context,
+  });
+  return { url: data.downloadUrl, expiresAt: data.expiresAt, filename: data.filename };
 }

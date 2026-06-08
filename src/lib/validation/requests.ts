@@ -1,10 +1,24 @@
 import { z } from "zod";
 
+export const HR_REQUEST_CATEGORIES = [
+  "Benefits",
+  "Payroll",
+  "Time off",
+  "Onboarding",
+  "Documents",
+  "Workplace",
+  "Other",
+] as const;
+
 export const hrRequestSchema = z.object({
-  subject: z.string().min(3, "Subject is required"),
-  category: z.string().min(1, "Category is required"),
+  subject: z.string().min(3, "Subject must be at least 3 characters"),
+  category: z.enum(HR_REQUEST_CATEGORIES, {
+    error: "Select a category",
+  }),
   body: z.string().min(10, "Describe your request (min 10 characters)"),
-  priority: z.enum(["low", "medium", "high"]),
+  priority: z.enum(["low", "medium", "high"], {
+    error: "Select a priority",
+  }),
 });
 
 export type HRRequestFormValues = z.infer<typeof hrRequestSchema>;

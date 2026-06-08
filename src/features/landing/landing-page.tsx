@@ -10,7 +10,7 @@ import { StatsSection } from "@/components/landing/stats-section";
 import { FeaturesSection } from "@/components/landing/features-section";
 import { ModulesSection } from "@/components/landing/modules-section";
 import { HowItWorksSection } from "@/components/landing/how-it-works-section";
-import { SecuritySection } from "@/components/landing/security-section";
+import { InstitutionalSection } from "@/components/landing/institutional-section";
 import { CtaSection } from "@/components/landing/cta-section";
 import { LandingFooter } from "@/components/landing/landing-footer";
 
@@ -26,16 +26,16 @@ export function LandingPage() {
   }, [isHydrated, session, router]);
 
   return (
-    <div className="min-h-screen landing-mesh">
+    <div className="min-h-screen bg-background">
       <LandingNav />
       <main>
         <HeroSection />
         <TrustBar />
         <StatsSection />
+        <InstitutionalSection />
         <FeaturesSection />
         <ModulesSection />
         <HowItWorksSection />
-        <SecuritySection />
         <CtaSection />
       </main>
       <LandingFooter />

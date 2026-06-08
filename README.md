@@ -19,12 +19,34 @@ Production-ready Next.js frontend for a corporate HR self-service portal.
 | `/` | Next.js frontend (Portal RH V1 UI) |
 | `/backend` | NestJS REST API + Prisma + PostgreSQL |
 
-## Getting started (frontend)
+## Getting started (full stack — one command)
+
+From the project root:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
+cd backend && cp .env.example .env && cd ..
 npm install
+cd backend && npm install && npm run db:setup && cd ..
 npm run dev
+```
+
+This starts **PostgreSQL**, the **NestJS API** (port 3001), and the **Next.js frontend** (port 3000) in one terminal.
+
+Stop everything:
+
+```bash
+npm run dev:stop
+```
+
+Open [http://localhost:3000/login](http://localhost:3000/login) to sign in.
+
+## Getting started (frontend only)
+
+```bash
+cp .env.example .env
+npm install
+npm run dev:frontend
 ```
 
 ### Environment (`.env.local`)

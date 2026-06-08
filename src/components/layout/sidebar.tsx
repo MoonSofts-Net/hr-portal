@@ -1,9 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { PlatformIcons } from "@/components/icons";
+import { useTranslations } from "@/hooks/use-translations";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { BRAND } from "@/lib/landing/content";
 import { cn } from "@/lib/utils";
 import { getVisibleNavItems } from "@/lib/navigation";
 import type { NavItem } from "@/lib/navigation";
@@ -35,6 +38,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const permissions = usePermissions();
   const { user, tenantName } = useAuthStore();
+  const { t } = useTranslations();
   const items = getVisibleNavItems(permissions);
 
   const [expandedOverrides, setExpandedOverrides] = useState<Record<string, boolean>>({});
@@ -97,20 +101,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="flex h-[72px] shrink-0 items-center gap-[12px] border-b border-sidebar-border px-[20px]">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-glow">
-            <PlatformIcons.shield className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <Link
-              href="/dashboard"
-              onClick={onClose}
-              className="block font-bold text-[15px] tracking-tight text-sidebar-foreground hover:text-[white] transition-colors"
-            >
-              Portal RH
-            </Link>
-            <p className="truncate text-[11px] text-sidebar-muted">{tenantName}</p>
-          </div>
+        <div className="flex h-[72px] shrink-0 items-center gap-[12px] border-b border-sidebar-border px-[16px]">
+          <BrandLogo href="/dashboard" size="sm" theme="dark" onClick={onClose} className="min-w-0 flex-1" />
           <Button
             variant="ghost"
             size="icon"
@@ -123,7 +115,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-[12px] space-y-[4px] scrollbar-thin">
           <p className="px-[12px] py-[8px] text-[10px] font-bold uppercase tracking-widest text-sidebar-muted shrink-0">
-            Menu
+            {t("nav.menu")}
           </p>
           {items.map((item) => {
             const active = isItemActive(pathname, item);
@@ -152,9 +144,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           })}
         </nav>
 
-        <div className="shrink-0 border-t border-sidebar-border p-[16px]">
+        <div className="shrink-0 border-t border-sidebar-border p-[16px] space-y-[12px]">
+          <LanguageSwitcher className="w-full justify-center" />
+          <p className="truncate text-[10px] text-sidebar-muted px-[4px]">{tenantName ?? BRAND.name}</p>
           <div className="rounded-xl bg-sidebar-border/30 p-[12px] flex items-center gap-[10px]">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--brand-yellow)/0.25)] text-[hsl(var(--brand-yellow))]">
               <PlatformIcons.user className="h-[18px] w-[18px]" />
             </div>
             <div className="min-w-0">

@@ -11,6 +11,7 @@ import { PasswordHasherService } from '../../security/password-hasher.service';
 import { ok, paginated } from '../../common/utils/api-response.util';
 import { buildMeta, buildOrderBy, resolvePagination } from '../../common/utils/pagination.util';
 import { maskCpfFromDigits } from '../../common/utils/cpf-mask.util';
+import { hasValidCpfLength, normalizeCpf } from '../../common/utils/cpf.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
@@ -124,9 +125,9 @@ export class UsersService {
     actorId: string,
   ) {
     const email = dto.email.trim().toLowerCase();
-    const cpfNorm = dto.cpf.replace(/\D/g, '');
-    if (cpfNorm.length !== 11) {
-      throw new ConflictException('Invalid CPF');
+    const cpfNorm = normalizeCpf(dto.cpf);
+    if (!hasValidCpfLength(cpfNorm)) {
+      throw new ConflictException('CPF must have 11 digits');
     }
 
     const existing = await this.prisma.user.findFirst({

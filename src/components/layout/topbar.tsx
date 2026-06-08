@@ -12,29 +12,24 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { getNotifications } from "@/lib/api/notifications";
+import { useConfirm } from "@/components/feedback/confirm-provider";
+import { useToast } from "@/components/feedback/toast-provider";
 import { cn } from "@/lib/utils";
+
+import { ROUTE_LABEL_KEYS } from "@/lib/navigation";
+import { useTranslations } from "@/hooks/use-translations";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 
 interface TopbarProps {
   onMenuClick: () => void;
 }
 
-const ROUTE_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  users: "Users",
-  roles: "Roles",
-  onboarding: "Onboarding",
-  documents: "Documents",
-  requests: "HR Requests",
-  point: "Point",
-  admin: "Administration",
-  "audit-logs": "Audit Logs",
-};
-
 function useBreadcrumbs() {
   const pathname = usePathname();
+  const { t } = useTranslations();
   const segments = pathname.split("/").filter(Boolean);
   return segments.map((seg, i) => ({
-    label: ROUTE_LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1),
+    label: ROUTE_LABEL_KEYS[seg] ? t(ROUTE_LABEL_KEYS[seg]) : seg.charAt(0).toUpperCase() + seg.slice(1),
     href: "/" + segments.slice(0, i + 1).join("/"),
     isLast: i === segments.length - 1,
   }));
@@ -44,6 +39,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const router = useRouter();
   const { user, tenantName, clearAuth } = useAuthStore();
   const context = useRequestContext();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const { t } = useTranslations();
   const [showNotifs, setShowNotifs] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const breadcrumbs = useBreadcrumbs();
@@ -73,14 +71,25 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   }, []);
 
   const handleLogout = async () => {
+    const approved = await confirm({
+      title: t("topbar.logoutTitle"),
+      description: t("topbar.logoutDescription"),
+      confirmLabel: t("topbar.logoutConfirm"),
+      cancelLabel: t("common.cancel"),
+      variant: "warning",
+    });
+    if (!approved) return;
+
     await logout();
     clearAuth();
+    toast.info(t("topbar.signedOut"), t("topbar.signedOutMessage"));
     router.push("/login");
   };
 
   return (
     <header className="sticky top-0 z-30 border-b border-border/80 bg-card/85 backdrop-blur-xl">
-      <div className="flex h-[68px] items-center gap-[12px] px-[16px] lg:px-[24px]">
+      <div className="coral-top-bar h-[3px] w-full" />
+      <div className="flex h-[65px] items-center gap-[12px] px-[16px] lg:px-[24px]">
         <Button
           variant="ghost"
           size="icon"
@@ -114,7 +123,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           <div className="relative">
             <PlatformIcons.search className="absolute left-[12px] top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search modules, users, documents..."
+              placeholder={t("topbar.searchPlaceholder")}
               className="pl-[40px] h-10 bg-muted/40 border-transparent focus:bg-card"
               disabled
             />
@@ -133,7 +142,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               size="icon"
               className="relative"
               onClick={() => setShowNotifs(!showNotifs)}
-              aria-label="Notifications"
+              aria-label={t("topbar.notifications")}
             >
               <PlatformIcons.bell className="h-[20px] w-[20px]" />
               {unread > 0 && (
@@ -145,15 +154,15 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             {showNotifs && (
               <div className="absolute right-0 top-full mt-[10px] w-[360px] rounded-xl border border-border/80 bg-card shadow-elevated z-50 overflow-hidden animate-fade-in">
                 <div className="flex items-center justify-between border-b border-border/80 px-[16px] py-[14px]">
-                  <p className="font-semibold text-sm">Notifications</p>
+                  <p className="font-semibold text-sm">{t("topbar.notifications")}</p>
                   {unread > 0 && (
-                    <Badge variant="danger">{unread} new</Badge>
+                    <Badge variant="danger">{unread} {t("topbar.notificationsNew")}</Badge>
                   )}
                 </div>
                 <div className="max-h-[320px] overflow-y-auto">
                   {notifications.length === 0 ? (
                     <p className="p-[24px] text-sm text-muted-foreground text-center">
-                      You are all caught up
+                      {t("topbar.notificationsEmpty")}
                     </p>
                   ) : (
                     notifications.map((n) => (
@@ -188,11 +197,13 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             </Avatar>
           </div>
 
+          <LanguageSwitcher />
+
           <Button
             variant="ghost"
             size="icon"
             onClick={handleLogout}
-            title="Logout"
+            title={t("topbar.logout")}
             className="text-muted-foreground hover:text-destructive"
           >
             <PlatformIcons.logout className="h-[20px] w-[20px]" />
