@@ -12,7 +12,7 @@ const badgeVariants = cva(
         success: "border-transparent bg-[hsl(var(--success-bg))] text-[hsl(var(--success))]",
         warning: "border-transparent bg-[hsl(var(--warning-bg))] text-[hsl(var(--warning))]",
         danger: "border-transparent bg-red-100 text-red-700",
-        muted: "border-transparent bg-muted text-muted-foreground",
+        muted: "border-transparent bg-muted text-[hsl(var(--muted-foreground))]",
       },
     },
     defaultVariants: { variant: "default" },

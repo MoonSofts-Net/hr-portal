@@ -9,9 +9,15 @@ const plusJakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+import { BRAND } from "@/lib/landing/content";
+
 export const metadata: Metadata = {
-  title: "Portal RH",
-  description: "Corporate HR self-service portal",
+  title: `${BRAND.name} — Portal do Colaborador / Employee Portal`,
+  description:
+    "Portal interno Armazém Coral Achaqui para admissão, documentos, solicitações ao RH e espelho de ponto. Internal employee portal for onboarding, documents, and HR requests.",
+  icons: {
+    icon: "/brand/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -20,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${plusJakarta.variable} font-sans`}>
         <AppProviders>{children}</AppProviders>
       </body>

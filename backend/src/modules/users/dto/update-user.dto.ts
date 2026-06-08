@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsDatabaseUuid } from '../../../common/validators/database-uuid.validator';
 
 export class UpdateUserDto {
   @ApiPropertyOptional()
@@ -14,7 +15,7 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsDatabaseUuid()
   roleId?: string;
 
   @ApiPropertyOptional()

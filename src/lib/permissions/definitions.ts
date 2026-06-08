@@ -37,7 +37,7 @@ export const MODULE_LABELS: Record<PermissionModule, string> = {
   audit: "Audit Logs",
 };
 
-export const SUPER_ADMIN_ROLE_ID = "role-super-admin";
+export { ROLE_SUPER_ADMIN_ID as SUPER_ADMIN_ROLE_ID } from "@/lib/constants/ids";
 
 export function getPermissionsByModule(): Record<PermissionModule, Permission[]> {
   const grouped = {} as Record<PermissionModule, Permission[]>;

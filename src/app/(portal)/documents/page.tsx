@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { PlatformIcons } from "@/components/icons";
-import { getDocuments, requestSecureDownloadUrl } from "@/lib/api/documents";
+import { downloadDocument, getDocuments } from "@/lib/api/documents";
 import { useRequestContext } from "@/features/auth/store";
+import { useToast } from "@/components/feedback/toast-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -13,7 +14,7 @@ import { DataTable } from "@/components/tables/data-table";
 import { StatusBadge } from "@/components/status/status-badge";
 import { LoadingState } from "@/components/status/loading-state";
 import { PermissionGuard } from "@/components/guards/permission-guard";
-import type { Document, DocumentCategory } from "@/types";
+import type { ApiError, Document, DocumentCategory } from "@/types";
 import { formatDate } from "@/lib/utils";
 
 const CATEGORIES: { value: DocumentCategory | ""; label: string }[] = [
@@ -27,17 +28,28 @@ const CATEGORIES: { value: DocumentCategory | ""; label: string }[] = [
 
 export default function DocumentsPage() {
   const context = useRequestContext();
+  const toast = useToast();
   const [category, setCategory] = useState<DocumentCategory | "">("");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["documents", context.tenantId, category],
     queryFn: () =>
       getDocuments(context, category ? { category } : undefined),
+    enabled: Boolean(context.tenantId),
   });
 
   const handleDownload = async (doc: Document) => {
-    const { url } = await requestSecureDownloadUrl(doc.id, context);
-    alert(`Secure download URL requested (mock):\n${url}\n\nExpires in 5 minutes.`);
+    setDownloadingId(doc.id);
+    try {
+      await downloadDocument(doc, context);
+      toast.success("Download complete", doc.name);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      toast.error("Download failed", apiErr.message ?? "Could not download file");
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const columns = [
@@ -62,8 +74,20 @@ export default function DocumentsPage() {
       header: "",
       cell: (d: Document) => (
         <PermissionGuard permission="documents.download">
-          <Button variant="ghost" size="sm" onClick={() => handleDownload(d)}>
-            <PlatformIcons.download className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={downloadingId === d.id}
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleDownload(d);
+            }}
+          >
+            {downloadingId === d.id ? (
+              <PlatformIcons.loader className="h-4 w-4 animate-spin" />
+            ) : (
+              <PlatformIcons.download className="h-4 w-4" />
+            )}
           </Button>
         </PermissionGuard>
       ),

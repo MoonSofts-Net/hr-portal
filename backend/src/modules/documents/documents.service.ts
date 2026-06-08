@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { DocumentStatus, Prisma } from '@prisma/client';
 import { createHash } from 'crypto';
+import type { Response } from 'express';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import {
   STORAGE_SERVICE,
@@ -22,6 +23,8 @@ import { PermissionsResolverService } from '../auth/services/permissions-resolve
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { ListDocumentsQueryDto } from './dto/list-documents-query.dto';
 import { RequestDownloadUrlDto } from './dto/request-download-url.dto';
+import { FileDownloadQueryDto } from './dto/file-download-query.dto';
+import { LocalStorageService } from '../../storage/local-storage.service';
 import { FileValidationService } from './services/file-validation.service';
 import { DocumentAccessService } from './services/document-access.service';
 import { VIRUS_SCANNER, VirusScanner } from './services/virus-scan.service';
@@ -63,6 +66,7 @@ export class DocumentsService {
     private readonly permissions: PermissionsResolverService,
     @Inject(STORAGE_SERVICE) private readonly storage: StorageService,
     @Inject(VIRUS_SCANNER) private readonly virusScanner: VirusScanner,
+    private readonly localStorage: LocalStorageService,
   ) {}
 
   async upload(
@@ -316,7 +320,8 @@ export class DocumentsService {
     const signed = await this.storage.getSignedDownloadUrl({
       storageKey: versionRow.storageKey,
       expiresInSeconds,
-      filename: versionRow.originalFilename ?? undefined,
+      filename: versionRow.originalFilename ?? doc.name,
+      contentType: versionRow.mimeType ?? doc.mimeType ?? undefined,
     });
 
     await this.audit.recordEvent('DOCUMENT_DOWNLOADED', {
@@ -332,7 +337,16 @@ export class DocumentsService {
       version: versionRow.version,
       downloadUrl: signed.url,
       expiresAt: signed.expiresAt.toISOString(),
+      filename: versionRow.originalFilename ?? doc.name,
     });
+  }
+
+  async streamSignedFileDownload(query: FileDownloadQueryDto, res: Response) {
+    if (this.config.get<string>('storage.provider', 'local') !== 'local') {
+      throw new BadRequestException('Direct file download route is only used for local storage');
+    }
+
+    await this.localStorage.serveSignedDownload(query, res);
   }
 
   async approve(tenantId: string, documentId: string, user: AuthenticatedUser) {

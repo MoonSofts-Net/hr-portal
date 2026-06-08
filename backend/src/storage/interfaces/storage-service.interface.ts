@@ -18,6 +18,7 @@ export interface SignedUrlParams {
   storageKey: string;
   expiresInSeconds?: number;
   filename?: string;
+  contentType?: string;
 }
 
 export interface SignedUrlResult {

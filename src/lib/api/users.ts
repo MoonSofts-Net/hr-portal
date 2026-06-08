@@ -1,5 +1,6 @@
 import { apiFetchPaginated, apiRequest, apiFetch, useMockApi, type RequestContext } from "./client";
 import { MOCK_ROLES, MOCK_USERS } from "@/mocks/seed";
+import { normalizeCpf } from "@/lib/utils/cpf";
 import type { PaginatedResult, User } from "@/types";
 
 function toPaginated<T>(data: T[], page: number, limit: number, total: number): PaginatedResult<T> {
@@ -8,14 +9,17 @@ function toPaginated<T>(data: T[], page: number, limit: number, total: number): 
 
 function mapApiUser(u: Record<string, unknown>): User {
   const status = String(u.status ?? "ACTIVE").toUpperCase();
+  const roleObj = u.role as { id?: string; name?: string } | null | undefined;
+  const rolesArr = u.roles as { id: string; name: string }[] | undefined;
+  const primaryRole = roleObj ?? rolesArr?.[0];
   return {
     id: String(u.id),
-    tenantId: String(u.tenantId),
+    tenantId: String(u.tenantId ?? ""),
     email: String(u.email),
     name: String(u.name),
     cpf: String(u.cpf ?? u.cpfMasked ?? ""),
-    roleId: String((u.role as { id?: string })?.id ?? u.roleId ?? ""),
-    roleName: String((u.role as { name?: string })?.name ?? u.roleName ?? ""),
+    roleId: String(primaryRole?.id ?? u.roleId ?? ""),
+    roleName: String(primaryRole?.name ?? u.roleName ?? ""),
     department: u.department ? String(u.department) : undefined,
     status:
       status === "ACTIVE" ? "active" : status === "DISABLED" || status === "SUSPENDED" ? "inactive" : "pending",
@@ -73,6 +77,139 @@ export async function getUserById(id: string, context: RequestContext): Promise<
   } catch {
     return null;
   }
+}
+
+export interface CreateUserInput {
+  name: string;
+  email: string;
+  cpf: string;
+  roleId: string;
+  password: string;
+  department?: string;
+  status: "active" | "inactive" | "pending";
+}
+
+export interface UpdateUserInput {
+  name?: string;
+  email?: string;
+  cpf?: string;
+  roleId?: string;
+  department?: string;
+  status?: "active" | "inactive" | "pending";
+  password?: string;
+}
+
+function mapStatusToApi(status: "active" | "inactive" | "pending"): string {
+  switch (status) {
+    case "active":
+      return "ACTIVE";
+    case "inactive":
+      return "DISABLED";
+    default:
+      return "INVITED";
+  }
+}
+
+export async function createUser(
+  context: RequestContext,
+  input: CreateUserInput
+): Promise<User> {
+  if (useMockApi()) {
+    return apiRequest(() => {
+      const id = `user-${Date.now()}`;
+      const role = MOCK_ROLES.find((r) => r.id === input.roleId);
+      const user: User = {
+        id,
+        tenantId: context.tenantId,
+        email: input.email,
+        name: input.name,
+        cpf: input.cpf.replace(/\D/g, ""),
+        roleId: input.roleId,
+        roleName: role?.name ?? "Employee",
+        department: input.department,
+        status: input.status,
+        createdAt: new Date().toISOString(),
+      };
+      MOCK_USERS.push(user);
+      return user;
+    }, context);
+  }
+
+  const created = await apiFetch<Record<string, unknown>>("/users", {
+    method: "POST",
+    context,
+    body: JSON.stringify({
+      email: input.email,
+      name: input.name,
+      cpf: normalizeCpf(input.cpf),
+      roleId: input.roleId,
+      password: input.password,
+      department: input.department || undefined,
+    }),
+  });
+
+  const user = mapApiUser(created);
+
+  const targetStatus = mapStatusToApi(input.status);
+  if (targetStatus !== "INVITED") {
+    await apiFetch(`/users/${user.id}/status`, {
+      method: "PATCH",
+      context,
+      body: JSON.stringify({ status: targetStatus }),
+    });
+    user.status = input.status;
+  }
+
+  return user;
+}
+
+export async function updateUser(
+  context: RequestContext,
+  id: string,
+  input: UpdateUserInput
+): Promise<User> {
+  if (useMockApi()) {
+    return apiRequest(() => {
+      const idx = MOCK_USERS.findIndex((u) => u.id === id && u.tenantId === context.tenantId);
+      if (idx === -1) throw new Error("User not found");
+      const role = input.roleId
+        ? MOCK_ROLES.find((r) => r.id === input.roleId)
+        : undefined;
+      MOCK_USERS[idx] = {
+        ...MOCK_USERS[idx],
+        ...input,
+        roleName: role?.name ?? MOCK_USERS[idx].roleName,
+      };
+      return MOCK_USERS[idx];
+    }, context);
+  }
+
+  const body: Record<string, unknown> = {};
+  if (input.name) body.name = input.name;
+  if (input.email) body.email = input.email;
+  if (input.roleId) body.roleId = input.roleId;
+  if (input.department !== undefined) body.department = input.department || undefined;
+  if (input.password) body.password = input.password;
+
+  if (Object.keys(body).length > 0) {
+    await apiFetch(`/users/${id}`, {
+      method: "PATCH",
+      context,
+      body: JSON.stringify(body),
+    });
+  }
+
+  if (input.status) {
+    await apiFetch(`/users/${id}/status`, {
+      method: "PATCH",
+      context,
+      body: JSON.stringify({ status: mapStatusToApi(input.status) }),
+    });
+  }
+
+  const refreshed = await getUserById(id, context);
+  if (!refreshed) throw new Error("User not found after update");
+  return refreshed;
 }
 
 export async function getRolesForTenant(context: RequestContext) {

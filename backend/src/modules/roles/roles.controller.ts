@@ -22,17 +22,18 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 @ApiTags('Roles')
 @ApiBearerAuth()
 @Controller('roles')
-@RequirePermissions('admin.roles.manage')
 export class RolesController {
   constructor(private readonly service: RolesService) {}
 
   @Get()
+  @RequirePermissions('users.read', 'users.create', 'admin.roles.manage')
   @ApiOperation({ summary: 'List tenant roles' })
   findAll(@CurrentTenant() tenantId: string, @Query() query: PaginationQueryDto) {
     return this.service.findAll(tenantId, query);
   }
 
   @Post()
+  @RequirePermissions('admin.roles.manage')
   @ApiOperation({ summary: 'Create role' })
   create(
     @CurrentTenant() tenantId: string,
@@ -43,12 +44,14 @@ export class RolesController {
   }
 
   @Get(':id')
+  @RequirePermissions('users.read', 'users.create', 'admin.roles.manage')
   @ApiOperation({ summary: 'Get role with permissions' })
   findOne(@CurrentTenant() tenantId: string, @Param('id') id: string) {
     return this.service.findOne(tenantId, id);
   }
 
   @Patch(':id')
+  @RequirePermissions('admin.roles.manage')
   @ApiOperation({ summary: 'Update role' })
   update(
     @CurrentTenant() tenantId: string,
@@ -60,6 +63,7 @@ export class RolesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('admin.roles.manage')
   @ApiOperation({ summary: 'Delete role' })
   remove(
     @CurrentTenant() tenantId: string,
@@ -70,6 +74,7 @@ export class RolesController {
   }
 
   @Post(':id/permissions')
+  @RequirePermissions('admin.roles.manage')
   @ApiOperation({ summary: 'Replace role permissions (audited)' })
   setPermissions(
     @CurrentTenant() tenantId: string,

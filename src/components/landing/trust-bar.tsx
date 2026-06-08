@@ -1,25 +1,31 @@
+"use client";
+
+import { Reveal } from "@/components/landing/reveal";
+import { useTranslations } from "@/hooks/use-translations";
+
 export function TrustBar() {
+  const { t, messages } = useTranslations();
+  const items = messages.landing.trust.items;
+
   return (
-    <section className="border-y border-border/80 bg-card/50">
-      <div className="mx-auto max-w-[1200px] px-[20px] lg:px-[28px] py-[28px]">
-        <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-[20px]">
-          Built for enterprise HR teams
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-[12px] lg:gap-[20px]">
-          {["Onboarding", "Documents", "eSocial-ready*", "Multi-company", "Audit LGPD"].map(
-            (label) => (
-              <span
-                key={label}
-                className="rounded-full border border-border/80 bg-background px-[16px] py-[8px] text-sm font-medium text-muted-foreground"
-              >
-                {label}
-              </span>
-            )
-          )}
-        </div>
-        <p className="text-center text-[10px] text-muted-foreground mt-[12px]">
-          * Integration placeholders — not connected in V1
-        </p>
+    <section className="bg-background border-b border-border">
+      <div className="mx-auto max-w-[1200px] px-[20px] lg:px-[28px]">
+        <Reveal animation="fade" duration={600}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[16px] py-[20px]">
+            <p className="text-[13px] font-medium text-[hsl(var(--brand-navy))] shrink-0">
+              {t("landing.trust.title")}
+            </p>
+            <ul className="flex flex-wrap gap-x-[20px] gap-y-[8px]">
+              {items.map((label, index) => (
+                <Reveal key={label} animation="up" delay={index * 60} duration={550}>
+                  <li className="text-[13px] text-[hsl(var(--muted-foreground))] before:content-[''] before:inline-block before:w-[5px] before:h-[5px] before:rounded-full before:bg-[hsl(var(--brand-red))] before:mr-[8px] before:align-middle">
+                    {label}
+                  </li>
+                </Reveal>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

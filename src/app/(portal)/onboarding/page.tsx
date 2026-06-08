@@ -12,6 +12,8 @@ import { StatusBadge } from "@/components/status/status-badge";
 import { LoadingState } from "@/components/status/loading-state";
 import { PermissionGuard } from "@/components/guards/permission-guard";
 import type { OnboardingSubmission } from "@/types";
+import { ROLE_HR_ID } from "@/lib/constants/ids";
+import { SUPER_ADMIN_ROLE_ID } from "@/lib/permissions/definitions";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -57,7 +59,7 @@ export default function OnboardingPage() {
           keyExtractor={(o) => o.id}
           onRowClick={(o) => {
             const canReview =
-              user?.roleId === "role-hr" || user?.roleId === "role-super-admin";
+              user?.roleId === ROLE_HR_ID || user?.roleId === SUPER_ADMIN_ROLE_ID;
             router.push(
               canReview && o.status !== "not_started"
                 ? `/onboarding/review/${o.id}`

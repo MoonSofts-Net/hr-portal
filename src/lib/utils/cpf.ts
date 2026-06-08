@@ -10,5 +10,5 @@ export function normalizeCpf(cpf: string): string {
 }
 
 export function isValidCpfFormat(cpf: string): boolean {
-  return /^\d{11}$/.test(normalizeCpf(cpf));
+  return normalizeCpf(cpf).length === 11;
 }

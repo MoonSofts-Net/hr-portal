@@ -16,6 +16,7 @@ interface DataTableProps<T> {
   title?: string;
   description?: string;
   toolbar?: React.ReactNode;
+  emptyState?: React.ReactNode;
 }
 
 export function DataTable<T>({
@@ -26,6 +27,7 @@ export function DataTable<T>({
   title,
   description,
   toolbar,
+  emptyState,
 }: DataTableProps<T>) {
   return (
     <Card variant="elevated" className="overflow-hidden">
@@ -60,11 +62,12 @@ export function DataTable<T>({
           <tbody>
             {data.length === 0 ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="h-32 text-center text-muted-foreground"
-                >
-                  No records found
+                <td colSpan={columns.length} className="p-0">
+                  {emptyState ?? (
+                    <div className="flex h-32 items-center justify-center text-muted-foreground">
+                      No records found
+                    </div>
+                  )}
                 </td>
               </tr>
             ) : (

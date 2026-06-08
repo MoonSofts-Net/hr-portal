@@ -1,44 +1,53 @@
+"use client";
+
 import Link from "next/link";
 import { PlatformIcons } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/landing/reveal";
+import { BRAND } from "@/lib/landing/content";
+import { useTranslations } from "@/hooks/use-translations";
 
 export function CtaSection() {
+  const { t } = useTranslations();
+
   return (
-    <section className="py-[80px] lg:py-[100px]">
+    <section className="py-[72px] lg:py-[88px] bg-background">
       <div className="mx-auto max-w-[1200px] px-[20px] lg:px-[28px]">
-        <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-[40px] sm:p-[56px] text-center shadow-glow">
-          <div className="absolute inset-0 auth-grid-pattern opacity-30 pointer-events-none" />
-          <div className="relative">
-            <h2 className="text-3xl sm:text-4xl font-bold text-primary-foreground tracking-tight">
-              Ready to transform your HR operations?
-            </h2>
-            <p className="mt-[16px] text-primary-foreground/85 max-w-lg mx-auto leading-relaxed">
-              Sign in with a demo role and explore the full portal — dashboard, onboarding,
-              documents, requests, and more.
-            </p>
-            <div className="mt-[32px] flex flex-col sm:flex-row items-center justify-center gap-[12px]">
-              <Button
-                size="lg"
-                variant="secondary"
-                asChild
-                className="h-12 px-[28px] bg-[white] text-primary hover:bg-[white]/90"
-              >
-                <Link href="/login">
-                  Access Portal RH
-                  <PlatformIcons.arrowRight className="ml-[8px] h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="h-12 border-[white]/40 text-primary-foreground hover:bg-[white]/10 hover:text-primary-foreground"
-              >
-                <Link href="/forgot-password">Forgot password</Link>
-              </Button>
+        <Reveal animation="scale" duration={800}>
+          <div className="rounded-xl bg-[hsl(var(--brand-navy))] px-[32px] py-[40px] sm:px-[48px] sm:py-[48px] landing-surface landing-surface-hover">
+            <div className="max-w-[560px]">
+              <p className="text-[13px] font-semibold text-[hsl(var(--brand-yellow))] mb-[12px]">
+                {BRAND.name} {BRAND.tagline}
+              </p>
+              <h2 className="text-[1.75rem] sm:text-[2rem] font-bold text-[white] tracking-[-0.02em] leading-[1.2]">
+                {t("landing.cta.title")}
+              </h2>
+              <p className="mt-[14px] text-[16px] text-[white]/85 leading-[1.65]">
+                {t("landing.cta.description")}
+              </p>
+              <div className="mt-[28px] flex flex-col sm:flex-row gap-[12px]">
+                <Button
+                  size="lg"
+                  asChild
+                  className="h-11 bg-[white] text-[hsl(var(--brand-navy))] hover:bg-[white]/92 font-semibold transition-all duration-300 hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.98]"
+                >
+                  <Link href="/login">
+                    {t("landing.actions.accessPortal")}
+                    <PlatformIcons.arrowRight className="ml-[8px] h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  asChild
+                  className="h-11 bg-[white] text-[black] border-[white] hover:bg-[white]/92 hover:text-[black] font-semibold transition-all duration-300 hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.98]"
+                >
+                  <Link href="/forgot-password">{t("landing.actions.forgotPassword")}</Link>
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

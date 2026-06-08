@@ -1,17 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsDatabaseUuid } from '../../../common/validators/database-uuid.validator';
 import { AuditAction, PermissionModule } from '@prisma/client';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 export class ListAuditLogsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsDatabaseUuid()
   actorUserId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsDatabaseUuid()
   targetUserId?: string;
 
   @ApiPropertyOptional({ enum: PermissionModule })

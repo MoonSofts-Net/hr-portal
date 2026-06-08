@@ -1,12 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsOptional, IsUUID } from 'class-validator';
+import { IsDateString, IsOptional } from 'class-validator';
+import { IsDatabaseUuid } from '../../../common/validators/database-uuid.validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 export class ListPointRecordsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsDatabaseUuid()
   userId?: string;
 
   @ApiPropertyOptional()

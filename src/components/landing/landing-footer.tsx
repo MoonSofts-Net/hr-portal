@@ -1,47 +1,53 @@
-import Link from "next/link";
-import { PlatformIcons } from "@/components/icons";
-import { LANDING_NAV } from "@/lib/landing/content";
+"use client";
 
-const FOOTER_LINKS = {
-  Product: [
-    { label: "Features", href: "#features" },
-    { label: "Modules", href: "#modules" },
-    { label: "Security", href: "#security" },
-  ],
-  Portal: [
-    { label: "Sign in", href: "/login" },
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Reset password", href: "/forgot-password" },
-  ],
-};
+import Link from "next/link";
+import { BrandLogo } from "@/components/brand/brand-logo";
+import { Reveal } from "@/components/landing/reveal";
+import { BRAND, LANDING_NAV_HREFS } from "@/lib/landing/content";
+import { useTranslations } from "@/hooks/use-translations";
 
 export function LandingFooter() {
-  return (
-    <footer className="border-t border-border/80 bg-card">
-      <div className="mx-auto max-w-[1200px] px-[20px] lg:px-[28px] py-[56px]">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[40px]">
-          <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-[12px]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-                <PlatformIcons.shield className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-lg">Portal RH</span>
-            </Link>
-            <p className="mt-[16px] text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Corporate HR self-service portal for onboarding, documents, communication,
-              time mirror, and compliance — scalable for multi-company SaaS.
-            </p>
-          </div>
+  const { t } = useTranslations();
 
-          {Object.entries(FOOTER_LINKS).map(([title, links]) => (
-            <div key={title}>
-              <h4 className="font-semibold text-sm mb-[16px]">{title}</h4>
-              <ul className="space-y-[10px]">
-                {links.map((link) => (
+  const portalLinks = [
+    { label: t("landing.footer.enter"), href: "/login" },
+    { label: t("landing.footer.dashboard"), href: "/dashboard" },
+    { label: t("landing.footer.resetPassword"), href: "/forgot-password" },
+  ];
+
+  const institutionalLinks = [
+    { label: t("landing.footer.officialSite"), href: BRAND.website, external: true },
+    { label: t("landing.footer.aboutUs"), href: BRAND.institutionalUrl, external: true },
+    { label: t("landing.footer.portalResources"), href: "#features" },
+  ];
+
+  return (
+    <footer className="border-t border-border bg-card">
+      <div className="mx-auto max-w-[1200px] px-[20px] lg:px-[28px] py-[48px]">
+        <Reveal animation="up" duration={700}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[40px]">
+            <div className="lg:col-span-2">
+              <BrandLogo href="/" size="sm" subtitle={t("brand.portalSubtitle")} />
+              <p className="mt-[16px] text-[14px] text-[hsl(var(--muted-foreground))] leading-[1.65] max-w-sm">
+                {BRAND.name} {BRAND.tagline} — {t("landing.footer.description")}
+              </p>
+              <div className="mt-[20px] space-y-[4px] text-[14px] text-[hsl(var(--muted-foreground))]">
+                <p>{BRAND.phone}</p>
+                <p>{BRAND.whatsapp}</p>
+                <p>{BRAND.email}</p>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[13px] font-semibold mb-[14px] text-[hsl(var(--brand-navy))]">
+                {t("landing.footer.portal")}
+              </h4>
+              <ul className="space-y-[8px]">
+                {portalLinks.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                      className="text-[14px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--brand-navy))] transition-colors duration-200"
                     >
                       {link.label}
                     </Link>
@@ -49,21 +55,50 @@ export function LandingFooter() {
                 ))}
               </ul>
             </div>
-          ))}
-        </div>
 
-        <div className="mt-[48px] pt-[24px] border-t border-border/80 flex flex-col sm:flex-row items-center justify-between gap-[16px]">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Portal RH · Moonsofts HR Platform V1
+            <div>
+              <h4 className="text-[13px] font-semibold mb-[14px] text-[hsl(var(--brand-navy))]">
+                {t("landing.footer.institutional")}
+              </h4>
+              <ul className="space-y-[8px]">
+                {institutionalLinks.map((link) => (
+                  <li key={link.href}>
+                    {"external" in link && link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[14px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--brand-navy))] transition-colors duration-200"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-[14px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--brand-navy))] transition-colors duration-200"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Reveal>
+
+        <div className="mt-[40px] pt-[24px] border-t border-border flex flex-col sm:flex-row items-center justify-between gap-[12px]">
+          <p className="text-[13px] text-[hsl(var(--muted-foreground))]">
+            © {new Date().getFullYear()} {BRAND.name} · {t("landing.footer.copyright")}
           </p>
-          <nav className="flex flex-wrap gap-[20px]">
-            {LANDING_NAV.map((item) => (
+          <nav className="flex flex-wrap gap-[16px]">
+            {LANDING_NAV_HREFS.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="landing-nav-link text-[13px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--brand-navy))]"
               >
-                {item.label}
+                {t(`landing.nav.${item.key}`)}
               </a>
             ))}
           </nav>
