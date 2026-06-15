@@ -40,6 +40,15 @@ export default function UsersPage() {
     },
     { key: "cpf", header: "CPF", cell: (u: User) => <span className="font-mono text-xs">{maskCpf(u.cpf)}</span> },
     { key: "role", header: "Role", cell: (u: User) => u.roleName },
+    {
+      key: "branch",
+      header: "Branch",
+      cell: (u: User) => (
+        <span className="text-sm">
+          {u.branchName ? `${u.branchCode ?? ""} ${u.branchName}`.trim() : "—"}
+        </span>
+      ),
+    },
     { key: "status", header: "Status", cell: (u: User) => <StatusBadge status={u.status} /> },
   ];
 

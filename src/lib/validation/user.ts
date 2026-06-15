@@ -17,6 +17,10 @@ export const userFormSchema = z.object({
   email: z.string().email("Invalid email"),
   cpf: cpfField,
   roleId: roleIdField,
+  branchId: z
+    .string()
+    .min(1, "Branch is required")
+    .regex(UUID_REGEX, "Select a branch from the list"),
   department: z.string().optional(),
   status: z.enum(["active", "inactive", "pending"]),
 });

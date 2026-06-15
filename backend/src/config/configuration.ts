@@ -3,6 +3,7 @@ export default () => ({
   port: parseInt(process.env.PORT ?? '3001', 10),
   apiPrefix: process.env.API_PREFIX ?? 'api/v1',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+  appUrl: process.env.APP_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:3000',
 
   http: {
     bodyLimit: process.env.HTTP_BODY_LIMIT ?? '1mb',
@@ -50,6 +51,12 @@ export default () => ({
       'application/pdf,image/jpeg,image/png,image/webp,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ).split(','),
     signedUrlExpirySeconds: parseInt(process.env.S3_PRESIGNED_URL_EXPIRY_SECONDS ?? '300', 10),
+  },
+
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.RESEND_FROM_EMAIL ?? 'Portal RH <yuji@moonsofts.net>',
+    enabled: process.env.RESEND_ENABLED !== 'false' && !!process.env.RESEND_API_KEY,
   },
 
   integrations: {

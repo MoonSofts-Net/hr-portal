@@ -45,7 +45,7 @@ export class AuthController {
   @SkipAudit()
   @RateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'auth:forgot-password' })
   @Post('forgot-password')
-  @ApiOperation({ summary: 'Request password reset (placeholder — no email sent in V1)' })
+  @ApiOperation({ summary: 'Request password reset email via Resend' })
   forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
     return this.authService.forgotPassword(dto, { ip: req.ip });
   }

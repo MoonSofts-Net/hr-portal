@@ -65,6 +65,10 @@ export default function UserDetailPage() {
               {user.roleName}
             </p>
             <p>
+              <span className="text-muted-foreground">Branch: </span>
+              {user.branchName ? `${user.branchCode ?? ""} — ${user.branchName}`.trim() : "—"}
+            </p>
+            <p>
               <span className="text-muted-foreground">Department: </span>
               {user.department ?? "—"}
             </p>

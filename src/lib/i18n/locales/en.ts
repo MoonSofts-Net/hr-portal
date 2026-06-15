@@ -272,6 +272,7 @@ export const en = {
     admin: "Administration",
     overview: "Overview",
     companies: "Companies",
+    branches: "Branches",
     settings: "Settings",
     auditLogs: "Audit Logs",
   },

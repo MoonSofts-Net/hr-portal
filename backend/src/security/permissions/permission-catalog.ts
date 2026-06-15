@@ -30,6 +30,8 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   { id: 'point.adjust.approve', module: 'POINT', action: 'APPROVE', label: 'Approve point adjustments' },
   { id: 'admin.settings.read', module: 'ADMINISTRATION', action: 'VIEW', label: 'View admin settings' },
   { id: 'admin.settings.update', module: 'ADMINISTRATION', action: 'MANAGE', label: 'Update admin settings' },
+  { id: 'admin.branches.read', module: 'BRANCHES', action: 'VIEW', label: 'View branches' },
+  { id: 'admin.branches.manage', module: 'BRANCHES', action: 'MANAGE', label: 'Manage branches' },
   { id: 'admin.roles.manage', module: 'ADMINISTRATION', action: 'EDIT', label: 'Manage roles' },
   { id: 'audit.read', module: 'AUDIT', action: 'VIEW', label: 'View audit logs' },
 ];

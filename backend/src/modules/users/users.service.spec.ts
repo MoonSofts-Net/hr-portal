@@ -4,6 +4,9 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { FieldEncryptionService } from '../../security/field-encryption.service';
 import { PasswordHasherService } from '../../security/password-hasher.service';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
+import { BranchesService } from '../branches/branches.service';
+import { ResendIntegration } from '../../integrations/resend/resend.integration';
+import { ConfigService } from '@nestjs/config';
 
 describe('UsersService', () => {
   const tenantA = 'tenant-a';
@@ -33,6 +36,9 @@ describe('UsersService', () => {
       } as unknown as FieldEncryptionService,
       { hash: jest.fn(), verify: jest.fn() } as unknown as PasswordHasherService,
       { recordEvent: jest.fn() } as unknown as DomainAuditService,
+      { ensureAssignableBranch: jest.fn() } as unknown as BranchesService,
+      { isEnabled: jest.fn().mockReturnValue(false), send: jest.fn() } as unknown as ResendIntegration,
+      { get: jest.fn() } as unknown as ConfigService,
     );
   });
 

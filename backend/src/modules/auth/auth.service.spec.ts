@@ -8,6 +8,7 @@ import { TokenService } from './services/token.service';
 import { SessionService } from './services/session.service';
 import { PermissionsResolverService } from './services/permissions-resolver.service';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
+import { ResendIntegration } from '../../integrations/resend/resend.integration';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -62,6 +63,7 @@ describe('AuthService', () => {
       sessionService as unknown as SessionService,
       { resolveForRole: jest.fn().mockResolvedValue(['users.read']) } as unknown as PermissionsResolverService,
       audit as unknown as DomainAuditService,
+      { isEnabled: jest.fn().mockReturnValue(false), send: jest.fn() } as unknown as ResendIntegration,
     );
   });
 

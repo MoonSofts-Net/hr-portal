@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createUserFormSchema, type CreateUserFormValues } from "@/lib/validation/user";
 import { createUser, getRolesForTenant } from "@/lib/api/users";
+import { getBranches } from "@/lib/api/branches";
 import { useRequestContext } from "@/features/auth/store";
 import { useConfirm } from "@/components/feedback/confirm-provider";
 import { useToast } from "@/components/feedback/toast-provider";
@@ -37,6 +38,19 @@ export default function NewUserPage() {
     enabled: Boolean(context.tenantId),
   });
 
+  const {
+    data: branchesData,
+    isLoading: branchesLoading,
+    isError: branchesError,
+    error: branchesQueryError,
+  } = useQuery({
+    queryKey: ["branches-select", context.tenantId],
+    queryFn: () => getBranches(context, { activeOnly: true, pageSize: 100 }),
+    enabled: Boolean(context.tenantId),
+  });
+
+  const branches = branchesData?.data ?? [];
+
   const assignableRoles = roles.filter((r) => !r.isSystem);
 
   const {
@@ -65,6 +79,7 @@ export default function NewUserPage() {
         email: values.email,
         cpf: values.cpf,
         roleId: values.roleId,
+        branchId: values.branchId,
         password: values.password,
         department: values.department,
         status: values.status,
@@ -125,6 +140,31 @@ export default function NewUserPage() {
                 {assignableRoles.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Branch (filial)" error={errors.branchId?.message} required>
+              {branchesError && (
+                <p className="mb-[8px] text-sm text-destructive">
+                  {(branchesQueryError as ApiError)?.message ??
+                    "Could not load branches. Check your permissions and try again."}
+                </p>
+              )}
+              {!branchesLoading && !branchesError && branches.length === 0 && (
+                <p className="mb-[8px] text-sm text-muted-foreground">
+                  No active branches found.{" "}
+                  <a href="/admin/branches/new" className="underline">
+                    Create a branch
+                  </a>{" "}
+                  first.
+                </p>
+              )}
+              <Select {...register("branchId")} disabled={branchesLoading || branchesError}>
+                <option value="">Select branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.code} — {b.name}
                   </option>
                 ))}
               </Select>

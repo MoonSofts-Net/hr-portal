@@ -1,7 +1,10 @@
 /**
  * Verifies PostgreSQL is reachable before starting the API.
  */
+import { loadBackendEnv } from './load-env.mjs';
 import net from 'net';
+
+loadBackendEnv();
 
 const host = process.env.PGHOST ?? 'localhost';
 const port = Number(process.env.PGPORT ?? 5432);

@@ -272,6 +272,7 @@ export const pt = {
     admin: "Administração",
     overview: "Visão geral",
     companies: "Empresas",
+    branches: "Filiais",
     settings: "Configurações",
     auditLogs: "Logs de auditoria",
   },

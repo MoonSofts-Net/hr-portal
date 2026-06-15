@@ -82,6 +82,7 @@ enum PermissionModule {
   DOCUMENTS
   COMMUNICATION
   POINT
+  BRANCHES
   ADMINISTRATION
   AUDIT
 }
@@ -124,6 +125,8 @@ enum AuditAction {
   POINT_ADJUSTMENT_REJECTED
   TENANT_CREATED
   TENANT_UPDATED
+  BRANCH_CREATED
+  BRANCH_UPDATED
   CROSS_TENANT_ACCESS_ATTEMPT
 }
 
@@ -168,9 +171,36 @@ model Tenant {
   auditLogs                     AuditLog[]
   systemSettings                SystemSetting[]
   refreshTokens                 RefreshToken[]
+  branches                      Branch[]
 
   @@index([isActive])
   @@map("tenants")
+}
+
+// ─── 1b. Branch (filial) — organizational unit within a tenant ───────────────
+
+model Branch {
+  id           String   @id @default(uuid())
+  tenantId     String
+  code         String
+  name         String
+  legalName    String?
+  taxId        String? /// CNPJ — encrypt at application layer if stored
+  address      String?
+  city         String?
+  state        String?
+  isContracted Boolean  @default(true) /// company operates / has contract with this branch
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users  User[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@map("branches")
 }
 
 // ─── 4. Permission (global catalog) ─────────────────────────────────────────
@@ -231,6 +261,7 @@ model RolePermission {
 model User {
   id           String     @id @default(uuid())
   tenantId     String
+  branchId     String?
   email        String
   passwordHash String
   name         String
@@ -243,6 +274,7 @@ model User {
   updatedAt    DateTime   @updatedAt
 
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
   userRoles    UserRole[]
   employeeProfile EmployeeProfile?
   refreshTokens   RefreshToken[]
@@ -261,6 +293,7 @@ model User {
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([tenantId, branchId])
   @@index([tenantId, status])
   @@index([createdAt])
   @@map("users")

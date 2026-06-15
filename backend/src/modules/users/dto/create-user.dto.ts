@@ -31,6 +31,10 @@ export class CreateUserDto {
   @IsDatabaseUuid()
   roleId!: string;
 
+  @ApiProperty({ description: 'Branch (filial) ID within the company' })
+  @IsDatabaseUuid()
+  branchId!: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

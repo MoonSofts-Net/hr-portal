@@ -133,6 +133,16 @@ export const AuditEvents = {
     module: PermissionModule.ADMINISTRATION,
     entityType: 'tenant',
   },
+  BRANCH_CREATED: {
+    action: AuditAction.BRANCH_CREATED,
+    module: PermissionModule.BRANCHES,
+    entityType: 'branch',
+  },
+  BRANCH_UPDATED: {
+    action: AuditAction.BRANCH_UPDATED,
+    module: PermissionModule.BRANCHES,
+    entityType: 'branch',
+  },
   CROSS_TENANT_ACCESS_ATTEMPT: {
     action: AuditAction.CROSS_TENANT_ACCESS_ATTEMPT,
     module: PermissionModule.ADMINISTRATION,

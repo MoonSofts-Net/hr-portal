@@ -11,6 +11,8 @@ import { FieldEncryptionService } from '../../security/field-encryption.service'
 import { PasswordHasherService } from '../../security/password-hasher.service';
 import { AuthenticatedUser } from '../../security/interfaces/authenticated-user.interface';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
+import { ResendIntegration } from '../../integrations/resend/resend.integration';
+import { passwordResetEmailHtml } from '../../integrations/resend/email-templates';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -34,6 +36,7 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly permissionsResolver: PermissionsResolverService,
     private readonly audit: DomainAuditService,
+    private readonly resend: ResendIntegration,
   ) {}
 
   async login(dto: LoginDto, meta?: { ip?: string; userAgent?: string }) {
@@ -122,6 +125,7 @@ export class AuthService {
         avatarUrl: true,
         lastLoginAt: true,
         tenant: { select: { id: true, name: true, slug: true } },
+        branch: { select: { id: true, code: true, name: true } },
       },
     });
 
@@ -148,6 +152,7 @@ export class AuthService {
       lastLoginAt: dbUser.lastLoginAt,
       mfaEnabled: dbUser.mfaEnabled,
       mfaVerified: user.mfaVerified,
+      branch: dbUser.branch,
       homeTenant: dbUser.tenant,
       activeTenant: activeTenant ?? dbUser.tenant,
       role: role ?? { id: user.roleId, name: user.roleName },
@@ -206,6 +211,12 @@ export class AuthService {
     const tenantId = user?.tenantId ?? (await this.resolveTenantIdBySlug(dto.tenantSlug));
 
     if (user && tenantId) {
+      const resetToken = await this.tokenService.signPasswordResetToken({
+        sub: user.id,
+        email: user.email,
+        tenantId: user.tenantId,
+      });
+
       await this.audit.recordEvent('PASSWORD_RESET_REQUEST', {
         tenantId,
         actorUserId: user.id,
@@ -214,12 +225,26 @@ export class AuthService {
         ipAddress: meta?.ip,
         metadata: { email },
       });
-      if (this.config.get('nodeEnv') === 'development') {
-        const resetToken = await this.tokenService.signPasswordResetToken({
-          sub: user.id,
-          email: user.email,
-          tenantId: user.tenantId,
+
+      const appUrl = this.config.get<string>('appUrl', 'http://localhost:3000');
+      const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+
+      const dbUser = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { name: true },
+      });
+
+      if (this.resend.isEnabled()) {
+        await this.resend.send({
+          to: user.email,
+          subject: 'Redefinição de senha — Portal RH',
+          html: passwordResetEmailHtml({
+            name: dbUser?.name ?? user.email,
+            resetUrl,
+          }),
+          text: `Redefina sua senha acessando: ${resetUrl}`,
         });
+      } else if (this.config.get('nodeEnv') === 'development') {
         return {
           message: GENERIC_RESET_MESSAGE,
           _devResetToken: resetToken,

@@ -23,6 +23,11 @@ export class UpdateUserDto {
   @IsString()
   department?: string;
 
+  @ApiPropertyOptional({ description: 'Branch (filial) ID within the company' })
+  @IsOptional()
+  @IsDatabaseUuid()
+  branchId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

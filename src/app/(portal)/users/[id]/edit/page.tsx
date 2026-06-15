@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserById, getRolesForTenant, updateUser } from "@/lib/api/users";
+import { getBranches } from "@/lib/api/branches";
 import { userFormSchema, type UserFormValues } from "@/lib/validation/user";
 import { useRequestContext } from "@/features/auth/store";
 import { useConfirm } from "@/components/feedback/confirm-provider";
@@ -38,6 +39,13 @@ export default function EditUserPage() {
     queryFn: () => getRolesForTenant(context),
   });
 
+  const { data: branchesData } = useQuery({
+    queryKey: ["branches-select", context.tenantId],
+    queryFn: () => getBranches(context, { activeOnly: true, pageSize: 100 }),
+  });
+
+  const branches = branchesData?.data ?? [];
+
   const {
     register,
     handleSubmit,
@@ -50,6 +58,7 @@ export default function EditUserPage() {
           email: user.email,
           cpf: user.cpf,
           roleId: user.roleId,
+          branchId: user.branchId ?? "",
           department: user.department,
           status: user.status,
         }
@@ -75,6 +84,7 @@ export default function EditUserPage() {
         name: values.name,
         email: values.email,
         roleId: values.roleId,
+        branchId: values.branchId,
         department: values.department,
         status: values.status,
       });
@@ -121,6 +131,16 @@ export default function EditUserPage() {
                       {r.name}
                     </option>
                   ))}
+              </Select>
+            </FormField>
+            <FormField label="Branch (filial)" error={errors.branchId?.message} required>
+              <Select {...register("branchId")}>
+                <option value="">Select branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.code} — {b.name}
+                  </option>
+                ))}
               </Select>
             </FormField>
             <FormField label="Department">
