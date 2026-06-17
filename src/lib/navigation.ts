@@ -12,6 +12,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
+  { labelKey: "nav.profile", href: "/profile", icon: PlatformIcons.users },
   { labelKey: "nav.dashboard", href: "/dashboard", icon: PlatformIcons.dashboard, permission: "dashboard.read" },
   { labelKey: "nav.users", href: "/users", icon: PlatformIcons.users, permission: "users.read" },
   {
@@ -81,6 +82,7 @@ export function getVisibleNavItems(permissionIds: string[]): NavItem[] {
 }
 
 export const ROUTE_LABEL_KEYS: Record<string, string> = {
+  profile: "nav.profile",
   dashboard: "nav.dashboard",
   users: "nav.users",
   roles: "nav.roles",
@@ -97,6 +99,8 @@ export const ROUTE_LABEL_KEYS: Record<string, string> = {
 };
 
 export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
+  "/profile": "dashboard.read",
+  "/change-password": "dashboard.read",
   "/dashboard": "dashboard.read",
   "/users": "users.read",
   "/roles": ["admin.roles.manage", "admin.settings.read"],

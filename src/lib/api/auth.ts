@@ -26,6 +26,7 @@ export interface LoginResult {
   session: AuthSession;
   user: User;
   tenantName: string;
+  requiresPasswordChange?: boolean;
 }
 
 const SESSION_KEY = "portal_rh_session_ref";
@@ -112,6 +113,7 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     accessToken: string;
     refreshToken: string;
     requiresMfa?: boolean;
+    requiresPasswordChange?: boolean;
     user: {
       id: string;
       email: string;
@@ -143,6 +145,7 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     permissions: string[];
     mfaVerified: boolean;
     mfaEnabled: boolean;
+    mustChangePassword?: boolean;
   }>("/auth/me", {
     headers: { Authorization: `Bearer ${data.accessToken}` },
   });
@@ -164,7 +167,7 @@ export async function login(input: LoginInput): Promise<LoginResult> {
   activeSession = { session, user };
   setStoredSessionRef(user.id);
 
-  return { session, user, tenantName: data.user.tenantName };
+  return { session, user, tenantName: data.user.tenantName, requiresPasswordChange: data.requiresPasswordChange ?? me.mustChangePassword };
 }
 
 export async function logout(): Promise<void> {
@@ -193,6 +196,7 @@ export async function getCurrentSession(): Promise<{
   session: AuthSession;
   user: User;
   tenantName?: string;
+  requiresPasswordChange?: boolean;
 } | null> {
   if (useMockApi()) {
     return apiRequest(() => {
@@ -231,6 +235,7 @@ export async function getCurrentSession(): Promise<{
       permissions: string[];
       mfaVerified: boolean;
       mfaEnabled: boolean;
+      mustChangePassword?: boolean;
     }>("/auth/me");
 
     const user = buildUserFromMe(me);
@@ -248,7 +253,12 @@ export async function getCurrentSession(): Promise<{
     };
 
     activeSession = { session, user };
-    return { session, user, tenantName: me.activeTenant.name };
+    return {
+      session,
+      user,
+      tenantName: me.activeTenant.name,
+      requiresPasswordChange: me.mustChangePassword,
+    };
   } catch {
     clearTokens();
     clearStoredSessionRef();
@@ -266,6 +276,31 @@ export async function requestPasswordReset(email: string): Promise<void> {
   await apiFetch("/auth/forgot-password", {
     method: "POST",
     body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  if (useMockApi()) {
+    return apiRequest(() => undefined);
+  }
+
+  await apiFetch("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  if (useMockApi()) {
+    return apiRequest(() => undefined);
+  }
+
+  await apiFetch("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
   });
 }
 

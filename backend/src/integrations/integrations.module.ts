@@ -4,6 +4,7 @@ import { WhatsappIntegration } from './whatsapp/whatsapp.integration';
 import { PayrollIntegration } from './payroll/payroll.integration';
 import { ActiveDirectoryIntegration } from './active-directory/active-directory.integration';
 import { ResendIntegration } from './resend/resend.integration';
+import { EmailService } from './email/email.service';
 
 @Module({
   providers: [
@@ -12,6 +13,7 @@ import { ResendIntegration } from './resend/resend.integration';
     PayrollIntegration,
     ActiveDirectoryIntegration,
     ResendIntegration,
+    EmailService,
   ],
   exports: [
     GovBrIntegration,
@@ -19,6 +21,7 @@ import { ResendIntegration } from './resend/resend.integration';
     PayrollIntegration,
     ActiveDirectoryIntegration,
     ResendIntegration,
+    EmailService,
   ],
 })
 export class IntegrationsModule {}

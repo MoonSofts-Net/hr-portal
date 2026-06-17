@@ -5,21 +5,22 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { FieldEncryptionService } from '../../security/field-encryption.service';
 import { PasswordHasherService } from '../../security/password-hasher.service';
 import { AuthenticatedUser } from '../../security/interfaces/authenticated-user.interface';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
-import { ResendIntegration } from '../../integrations/resend/resend.integration';
+import { EmailService } from '../../integrations/email/email.service';
 import { passwordResetEmailHtml } from '../../integrations/resend/email-templates';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { SelectTenantDto } from './dto/select-tenant.dto';
 import { TokenService } from './services/token.service';
 import { SessionService } from './services/session.service';
 import { PermissionsResolverService } from './services/permissions-resolver.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const GENERIC_AUTH_MESSAGE = 'Invalid credentials';
 const GENERIC_RESET_MESSAGE =
@@ -36,7 +37,8 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly permissionsResolver: PermissionsResolverService,
     private readonly audit: DomainAuditService,
-    private readonly resend: ResendIntegration,
+    private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async login(dto: LoginDto, meta?: { ip?: string; userAgent?: string }) {
@@ -88,6 +90,7 @@ export class AuthService {
     return {
       ...tokens,
       requiresMfa: user.mfaEnabled && !mfaVerified,
+      requiresPasswordChange: user.mustChangePassword,
       user: this.toSafeUserSummary(user, primaryRole.name, activeTenantId),
     };
   }
@@ -122,6 +125,7 @@ export class AuthService {
         name: true,
         status: true,
         mfaEnabled: true,
+        mustChangePassword: true,
         avatarUrl: true,
         lastLoginAt: true,
         tenant: { select: { id: true, name: true, slug: true } },
@@ -152,6 +156,7 @@ export class AuthService {
       lastLoginAt: dbUser.lastLoginAt,
       mfaEnabled: dbUser.mfaEnabled,
       mfaVerified: user.mfaVerified,
+      mustChangePassword: dbUser.mustChangePassword,
       branch: dbUser.branch,
       homeTenant: dbUser.tenant,
       activeTenant: activeTenant ?? dbUser.tenant,
@@ -225,6 +230,19 @@ export class AuthService {
         ipAddress: meta?.ip,
         metadata: { email },
       });
+      await this.notifications.notify({
+        tenantId,
+        userId: user.id,
+        type: 'auth.password_reset_requested',
+        category: 'auth',
+        messageKey: 'notifications.auth.passwordResetRequested',
+        actorUserId: user.id,
+        metadata: { email },
+        title: 'Solicitação de redefinição de senha',
+        body: 'Recebemos um pedido para redefinir sua senha.',
+        link: '/reset-password',
+        dedupeWindowSeconds: 60,
+      });
 
       const appUrl = this.config.get<string>('appUrl', 'http://localhost:3000');
       const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
@@ -234,8 +252,8 @@ export class AuthService {
         select: { name: true },
       });
 
-      if (this.resend.isEnabled()) {
-        await this.resend.send({
+      if (this.email.isEnabled()) {
+        await this.email.send({
           to: user.email,
           subject: 'Redefinição de senha — Portal RH',
           html: passwordResetEmailHtml({
@@ -261,7 +279,7 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: payload.sub },
-      data: { passwordHash, status: 'ACTIVE' },
+      data: { passwordHash, status: 'ACTIVE', mustChangePassword: false },
     });
 
     await this.sessionService.revokeAllUserSessions(payload.sub);
@@ -274,8 +292,66 @@ export class AuthService {
       ipAddress: meta?.ip,
       metadata: { event: 'password_reset_completed' },
     });
+    await this.notifications.notify({
+      tenantId: payload.tenantId,
+      userId: payload.sub,
+      type: 'auth.password_reset_completed',
+      category: 'auth',
+      messageKey: 'notifications.auth.passwordResetCompleted',
+      actorUserId: payload.sub,
+      metadata: { event: 'password_reset_completed' },
+      title: 'Senha redefinida',
+      body: 'Sua senha foi redefinida com sucesso.',
+      link: '/login',
+      dedupeWindowSeconds: 60,
+    });
 
-    return { message: 'Password updated successfully' };
+    return { message: 'PASSWORD_UPDATED_SUCCESSFULLY' };
+  }
+
+  async changePassword(
+    user: AuthenticatedUser,
+    dto: ChangePasswordDto,
+    meta?: { ip?: string },
+  ) {
+    const dbUser = await this.prisma.user.findFirst({
+      where: { id: user.userId, tenantId: user.homeTenantId },
+      select: { id: true, passwordHash: true, tenantId: true },
+    });
+    if (!dbUser) throw new UnauthorizedException();
+
+    const valid = await this.passwordHasher.verify(dto.currentPassword, dbUser.passwordHash);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+
+    const passwordHash = await this.passwordHasher.hash(dto.newPassword);
+    await this.prisma.user.update({
+      where: { id: dbUser.id },
+      data: { passwordHash, mustChangePassword: false },
+    });
+
+    await this.audit.recordEvent('USER_UPDATED', {
+      tenantId: dbUser.tenantId,
+      actorUserId: dbUser.id,
+      targetUserId: dbUser.id,
+      entityId: dbUser.id,
+      ipAddress: meta?.ip,
+      metadata: { event: 'password_changed' },
+    });
+    await this.notifications.notify({
+      tenantId: dbUser.tenantId,
+      userId: dbUser.id,
+      type: 'auth.password_changed',
+      category: 'auth',
+      messageKey: 'notifications.auth.passwordChanged',
+      actorUserId: dbUser.id,
+      metadata: { event: 'password_changed' },
+      title: 'Senha alterada',
+      body: 'Sua senha foi alterada com sucesso.',
+      link: '/profile',
+      dedupeWindowSeconds: 60,
+    });
+
+    return { message: 'PASSWORD_UPDATED_SUCCESSFULLY', mustChangePassword: false };
   }
 
   private async recordLoginFailure(

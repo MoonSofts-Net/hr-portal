@@ -284,6 +284,11 @@ export interface Notification {
   id: string;
   tenantId: string;
   userId: string;
+  type: string;
+  category: string;
+  messageKey: string;
+  actorUserId?: string;
+  metadata?: Record<string, unknown>;
   title: string;
   body: string;
   read: boolean;

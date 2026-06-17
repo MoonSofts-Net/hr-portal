@@ -89,7 +89,7 @@ export interface CreateUserInput {
   cpf: string;
   roleId: string;
   branchId: string;
-  password: string;
+  password?: string;
   department?: string;
   status: "active" | "inactive" | "pending";
 }
@@ -154,7 +154,7 @@ export async function createUser(
       cpf: normalizeCpf(input.cpf),
       roleId: input.roleId,
       branchId: input.branchId,
-      password: input.password,
+      ...(input.password ? { password: input.password } : {}),
       department: input.department || undefined,
     }),
   });

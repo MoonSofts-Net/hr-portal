@@ -53,11 +53,25 @@ export default () => ({
     signedUrlExpirySeconds: parseInt(process.env.S3_PRESIGNED_URL_EXPIRY_SECONDS ?? '300', 10),
   },
 
+  smtp: {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT ?? '587', 10),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS?.replace(/\s/g, ''),
+    fromEmail:
+      process.env.SMTP_FROM_EMAIL ??
+      process.env.RESEND_FROM_EMAIL ??
+      'Portal RH <admin@hrportal.com>',
+    enabled: process.env.SMTP_ENABLED !== 'false' && !!process.env.SMTP_HOST,
+  },
+
   resend: {
     apiKey: process.env.RESEND_API_KEY,
-    fromEmail: process.env.RESEND_FROM_EMAIL ?? 'Portal RH <yuji@moonsofts.net>',
+    fromEmail: process.env.RESEND_FROM_EMAIL ?? 'Portal RH <admin@hrportal.com>',
     enabled: process.env.RESEND_ENABLED !== 'false' && !!process.env.RESEND_API_KEY,
   },
+
+  defaultUserPassword: process.env.DEFAULT_USER_PASSWORD ?? 'Coral@2024',
 
   integrations: {
     govbr: { enabled: process.env.GOVBR_ENABLED === 'true' },

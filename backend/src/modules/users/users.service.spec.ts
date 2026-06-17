@@ -5,8 +5,9 @@ import { FieldEncryptionService } from '../../security/field-encryption.service'
 import { PasswordHasherService } from '../../security/password-hasher.service';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
 import { BranchesService } from '../branches/branches.service';
-import { ResendIntegration } from '../../integrations/resend/resend.integration';
+import { EmailService } from '../../integrations/email/email.service';
 import { ConfigService } from '@nestjs/config';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('UsersService', () => {
   const tenantA = 'tenant-a';
@@ -14,6 +15,8 @@ describe('UsersService', () => {
 
   let service: UsersService;
   let prisma: jest.Mocked<Pick<PrismaService, 'user' | 'role' | '$transaction'>>;
+  let audit: { recordEvent: jest.Mock };
+  let notifications: { notify: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -27,6 +30,8 @@ describe('UsersService', () => {
       role: { findFirst: jest.fn() } as unknown as jest.Mocked<PrismaService>['role'],
       $transaction: jest.fn(),
     };
+    audit = { recordEvent: jest.fn() };
+    notifications = { notify: jest.fn() };
 
     service = new UsersService(
       prisma as unknown as PrismaService,
@@ -35,10 +40,11 @@ describe('UsersService', () => {
         hashForLookup: jest.fn((v: string) => `hash:${v}`),
       } as unknown as FieldEncryptionService,
       { hash: jest.fn(), verify: jest.fn() } as unknown as PasswordHasherService,
-      { recordEvent: jest.fn() } as unknown as DomainAuditService,
+      audit as unknown as DomainAuditService,
       { ensureAssignableBranch: jest.fn() } as unknown as BranchesService,
-      { isEnabled: jest.fn().mockReturnValue(false), send: jest.fn() } as unknown as ResendIntegration,
+      { isEnabled: jest.fn().mockReturnValue(false), send: jest.fn() } as unknown as EmailService,
       { get: jest.fn() } as unknown as ConfigService,
+      notifications as unknown as NotificationsService,
     );
   });
 
@@ -62,6 +68,36 @@ describe('UsersService', () => {
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ tenantId: tenantB }),
+      }),
+    );
+  });
+
+  it('updateStatus emits user status notification', async () => {
+    (prisma.user.findFirst as jest.Mock).mockResolvedValue({ id: 'user-1', tenantId: tenantA });
+    (prisma.user.update as jest.Mock).mockResolvedValue({
+      id: 'user-1',
+      email: 'user@test.com',
+      name: 'User',
+      status: 'DISABLED',
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      branch: null,
+      employeeProfile: null,
+      userRoles: [],
+    });
+
+    await service.updateStatus(tenantA, 'user-1', 'DISABLED' as never, 'actor-1');
+
+    expect(audit.recordEvent).toHaveBeenCalledWith(
+      'USER_DISABLED',
+      expect.objectContaining({ tenantId: tenantA, targetUserId: 'user-1' }),
+    );
+    expect(notifications.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: tenantA,
+        userId: 'user-1',
+        type: 'user.status_changed',
       }),
     );
   });

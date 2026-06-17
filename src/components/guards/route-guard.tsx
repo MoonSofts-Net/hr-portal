@@ -6,6 +6,7 @@ import { useAuthStore } from "@/features/auth/store";
 import { hasAnyPermission, hasPermission } from "@/lib/permissions/check";
 import { ROUTE_PERMISSIONS } from "@/lib/navigation";
 import { LoadingState } from "@/components/status/loading-state";
+import { useTranslations } from "@/hooks/use-translations";
 
 function matchRoutePermission(pathname: string): string | string[] | undefined {
   const sorted = Object.keys(ROUTE_PERMISSIONS).sort((a, b) => b.length - a.length);
@@ -20,12 +21,18 @@ function matchRoutePermission(pathname: string): string | string[] | undefined {
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { session, isLoading, isHydrated } = useAuthStore();
+  const { session, isLoading, isHydrated, mustChangePassword } = useAuthStore();
+  const { t } = useTranslations();
 
   useEffect(() => {
     if (!isHydrated || isLoading) return;
     if (!session) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    if (mustChangePassword && pathname !== "/change-password") {
+      router.replace("/change-password");
       return;
     }
 
@@ -40,14 +47,14 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     if (!allowed) {
       router.replace("/dashboard?error=unauthorized");
     }
-  }, [session, isLoading, isHydrated, pathname, router]);
+  }, [session, isLoading, isHydrated, mustChangePassword, pathname, router]);
 
   if (!isHydrated || isLoading) {
-    return <LoadingState message="Checking session..." />;
+    return <LoadingState message={t("routeGuard.checkingSession")} />;
   }
 
   if (!session) {
-    return <LoadingState message="Redirecting to login..." />;
+    return <LoadingState message={t("routeGuard.redirectingToLogin")} />;
   }
 
   return <>{children}</>;

@@ -4,31 +4,29 @@ import { normalizeCpf } from "@/lib/utils/cpf";
 
 const roleIdField = z
   .string()
-  .min(1, "Role is required")
-  .regex(UUID_REGEX, "Select a role from the list");
+  .min(1, "validation.users.roleRequired")
+  .regex(UUID_REGEX, "validation.users.roleFromList");
 
 const cpfField = z
   .string()
-  .min(1, "CPF is required")
-  .refine((value) => normalizeCpf(value).length === 11, "CPF must have 11 digits");
+  .min(1, "validation.users.cpfRequired")
+  .refine((value) => normalizeCpf(value).length === 11, "validation.users.cpfElevenDigits");
 
 export const userFormSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email"),
+  name: z.string().min(2, "validation.users.nameRequired"),
+  email: z.string().email("validation.users.invalidEmail"),
   cpf: cpfField,
   roleId: roleIdField,
   branchId: z
     .string()
-    .min(1, "Branch is required")
-    .regex(UUID_REGEX, "Select a branch from the list"),
+    .min(1, "validation.users.branchRequired")
+    .regex(UUID_REGEX, "validation.users.branchFromList"),
   department: z.string().optional(),
   status: z.enum(["active", "inactive", "pending"]),
 });
 
 export type UserFormValues = z.infer<typeof userFormSchema>;
 
-export const createUserFormSchema = userFormSchema.extend({
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
+export const createUserFormSchema = userFormSchema;
 
 export type CreateUserFormValues = z.infer<typeof createUserFormSchema>;

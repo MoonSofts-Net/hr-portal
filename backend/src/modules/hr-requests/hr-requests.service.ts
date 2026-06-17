@@ -104,9 +104,15 @@ export class HrRequestsService {
     await this.notifications.notify({
       tenantId,
       userId: user.userId,
+      type: 'hr.request.created',
+      category: 'hr_requests',
+      messageKey: 'notifications.hrRequest.created',
+      actorUserId: user.userId,
+      metadata: { requestId: request.id, subject: dto.subject },
       title: 'Solicitação registrada',
       body: `Sua solicitação "${dto.subject}" foi criada.`,
       link: `/requests/${request.id}`,
+      dedupeWindowSeconds: 30,
     });
 
     await this.audit.recordEvent('HR_REQUEST_CREATED', {
@@ -154,6 +160,22 @@ export class HrRequestsService {
       metadata: { status: dto.status },
     });
 
+    if (updated.requesterId && updated.requesterId !== user.userId) {
+      await this.notifications.notify({
+        tenantId,
+        userId: updated.requesterId,
+        type: 'hr.request.status_changed',
+        category: 'hr_requests',
+        messageKey: 'notifications.hrRequest.statusChanged',
+        actorUserId: user.userId,
+        metadata: { requestId: id, subject: updated.subject, status: dto.status },
+        title: 'Atualização na sua solicitação',
+        body: `"${updated.subject}" — status: ${dto.status}`,
+        link: `/requests/${id}`,
+        dedupeWindowSeconds: 30,
+      });
+    }
+
     return ok(updated);
   }
 
@@ -188,9 +210,15 @@ export class HrRequestsService {
       await this.notifications.notify({
         tenantId,
         userId: notifyUserId,
+        type: 'hr.request.message_added',
+        category: 'hr_requests',
+        messageKey: 'notifications.hrRequest.messageAdded',
+        actorUserId: user.userId,
+        metadata: { requestId, subject: request.subject, isInternal },
         title: 'Nova mensagem na solicitação',
         body: request.subject,
         link: `/requests/${requestId}`,
+        dedupeWindowSeconds: 10,
       });
     }
 

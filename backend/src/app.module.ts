@@ -28,6 +28,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { BranchesModule } from './modules/branches/branches.module';
+import { ProfileModule } from './modules/profile/profile.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { BranchesModule } from './modules/branches/branches.module';
     AuditLogsModule,
     AdminModule,
     BranchesModule,
+    ProfileModule,
   ],
   providers: [
     {
