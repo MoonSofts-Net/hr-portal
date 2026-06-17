@@ -1,5 +1,5 @@
 import { apiFetchPaginated, apiRequest, apiFetch, useMockApi, type RequestContext } from "./client";
-import { MOCK_ROLES, MOCK_USERS } from "@/mocks/seed";
+import { MOCK_ROLES, MOCK_USERS, MOCK_BRANCHES } from "@/mocks/seed";
 import { normalizeCpf } from "@/lib/utils/cpf";
 import type { PaginatedResult, User } from "@/types";
 
@@ -12,6 +12,7 @@ function mapApiUser(u: Record<string, unknown>): User {
   const roleObj = u.role as { id?: string; name?: string } | null | undefined;
   const rolesArr = u.roles as { id: string; name: string }[] | undefined;
   const primaryRole = roleObj ?? rolesArr?.[0];
+  const branchObj = u.branch as { id?: string; code?: string; name?: string } | null | undefined;
   return {
     id: String(u.id),
     tenantId: String(u.tenantId ?? ""),
@@ -20,6 +21,9 @@ function mapApiUser(u: Record<string, unknown>): User {
     cpf: String(u.cpf ?? u.cpfMasked ?? ""),
     roleId: String(primaryRole?.id ?? u.roleId ?? ""),
     roleName: String(primaryRole?.name ?? u.roleName ?? ""),
+    branchId: branchObj?.id ? String(branchObj.id) : u.branchId ? String(u.branchId) : undefined,
+    branchName: branchObj?.name ? String(branchObj.name) : undefined,
+    branchCode: branchObj?.code ? String(branchObj.code) : undefined,
     department: u.department ? String(u.department) : undefined,
     status:
       status === "ACTIVE" ? "active" : status === "DISABLED" || status === "SUSPENDED" ? "inactive" : "pending",
@@ -84,7 +88,8 @@ export interface CreateUserInput {
   email: string;
   cpf: string;
   roleId: string;
-  password: string;
+  branchId: string;
+  password?: string;
   department?: string;
   status: "active" | "inactive" | "pending";
 }
@@ -94,6 +99,7 @@ export interface UpdateUserInput {
   email?: string;
   cpf?: string;
   roleId?: string;
+  branchId?: string;
   department?: string;
   status?: "active" | "inactive" | "pending";
   password?: string;
@@ -118,6 +124,7 @@ export async function createUser(
     return apiRequest(() => {
       const id = `user-${Date.now()}`;
       const role = MOCK_ROLES.find((r) => r.id === input.roleId);
+      const branch = MOCK_BRANCHES.find((b) => b.id === input.branchId);
       const user: User = {
         id,
         tenantId: context.tenantId,
@@ -126,6 +133,9 @@ export async function createUser(
         cpf: input.cpf.replace(/\D/g, ""),
         roleId: input.roleId,
         roleName: role?.name ?? "Employee",
+        branchId: input.branchId,
+        branchName: branch?.name,
+        branchCode: branch?.code,
         department: input.department,
         status: input.status,
         createdAt: new Date().toISOString(),
@@ -143,7 +153,8 @@ export async function createUser(
       name: input.name,
       cpf: normalizeCpf(input.cpf),
       roleId: input.roleId,
-      password: input.password,
+      branchId: input.branchId,
+      ...(input.password ? { password: input.password } : {}),
       department: input.department || undefined,
     }),
   });
@@ -188,6 +199,7 @@ export async function updateUser(
   if (input.name) body.name = input.name;
   if (input.email) body.email = input.email;
   if (input.roleId) body.roleId = input.roleId;
+  if (input.branchId) body.branchId = input.branchId;
   if (input.department !== undefined) body.department = input.department || undefined;
   if (input.password) body.password = input.password;
 

@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useQuery } from "@tanstack/react-query";
-import { getNotifications } from "@/lib/api/notifications";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications";
 import { useConfirm } from "@/components/feedback/confirm-provider";
 import { useToast } from "@/components/feedback/toast-provider";
 import { cn } from "@/lib/utils";
+import { getNotificationText } from "@/lib/notifications/format";
 
 import { ROUTE_LABEL_KEYS } from "@/lib/navigation";
 import { useTranslations } from "@/hooks/use-translations";
@@ -46,6 +47,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const notifRef = useRef<HTMLDivElement>(null);
   const breadcrumbs = useBreadcrumbs();
 
+  const queryClient = useQueryClient();
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications", context.userId],
     queryFn: () => getNotifications(context),
@@ -155,9 +157,23 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               <div className="absolute right-0 top-full mt-[10px] w-[360px] rounded-xl border border-border/80 bg-card shadow-elevated z-50 overflow-hidden animate-fade-in">
                 <div className="flex items-center justify-between border-b border-border/80 px-[16px] py-[14px]">
                   <p className="font-semibold text-sm">{t("topbar.notifications")}</p>
-                  {unread > 0 && (
-                    <Badge variant="danger">{unread} {t("topbar.notificationsNew")}</Badge>
-                  )}
+                  <div className="flex items-center gap-[8px]">
+                    {unread > 0 && (
+                      <Badge variant="danger">{unread} {t("topbar.notificationsNew")}</Badge>
+                    )}
+                    {unread > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={async () => {
+                          await markAllNotificationsRead(context);
+                          await queryClient.invalidateQueries({ queryKey: ["notifications", context.userId] });
+                        }}
+                      >
+                        {t("topbar.markAllRead")}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="max-h-[320px] overflow-y-auto">
                   {notifications.length === 0 ? (
@@ -173,11 +189,17 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                           "block px-[16px] py-[14px] border-b border-border/50 transition-colors hover:bg-muted/50",
                           !n.read && "bg-primary/[0.03]"
                         )}
-                        onClick={() => setShowNotifs(false)}
+                        onClick={async () => {
+                          setShowNotifs(false);
+                          if (!n.read) {
+                            await markNotificationRead(context, n.id);
+                            await queryClient.invalidateQueries({ queryKey: ["notifications", context.userId] });
+                          }
+                        }}
                       >
-                        <p className="font-medium text-sm">{n.title}</p>
+                        <p className="font-medium text-sm">{getNotificationText(n, t).title}</p>
                         <p className="text-muted-foreground text-xs mt-[4px] line-clamp-2">
-                          {n.body}
+                          {getNotificationText(n, t).body}
                         </p>
                       </Link>
                     ))
@@ -187,7 +209,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             )}
           </div>
 
-          <div className="hidden sm:flex items-center gap-[10px] rounded-xl border border-border/80 bg-card pl-[12px] pr-[4px] py-[4px] shadow-soft">
+          <Link href="/profile" className="hidden sm:flex items-center gap-[10px] rounded-xl border border-border/80 bg-card pl-[12px] pr-[4px] py-[4px] shadow-soft hover:bg-muted/30 transition-colors">
             <div className="text-right hidden md:block">
               <p className="text-sm font-semibold leading-tight">{user?.name}</p>
               <p className="text-[11px] text-muted-foreground">{user?.roleName}</p>
@@ -195,7 +217,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             <Avatar className="h-9 w-9 ring-2 ring-primary/15">
               <AvatarFallback className="text-xs font-bold">{initials}</AvatarFallback>
             </Avatar>
-          </div>
+          </Link>
 
           <LanguageSwitcher />
 
@@ -211,7 +233,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
           <Badge variant="outline" className="hidden xl:flex gap-[6px] font-normal normal-case tracking-normal">
             <PlatformIcons.shield className="h-3.5 w-3.5" />
-            MFA
+            {t("topbar.mfa")}
           </Badge>
         </div>
       </div>

@@ -22,6 +22,8 @@ export const PERMISSION_DEFINITIONS: Permission[] = [
   { id: "point.adjust.approve", module: "point", action: "approve", label: "Approve point adjustments" },
   { id: "admin.settings.read", module: "administration", action: "view", label: "View administration" },
   { id: "admin.settings.update", module: "administration", action: "manage", label: "Update admin settings" },
+  { id: "admin.branches.read", module: "branches", action: "view", label: "View branches" },
+  { id: "admin.branches.manage", module: "branches", action: "manage", label: "Manage branches" },
   { id: "admin.roles.manage", module: "administration", action: "edit", label: "Manage roles" },
   { id: "audit.read", module: "audit", action: "view", label: "View audit logs" },
 ];
@@ -33,6 +35,7 @@ export const MODULE_LABELS: Record<PermissionModule, string> = {
   documents: "Documents",
   communication: "HR Communication",
   point: "Point",
+  branches: "Branches",
   administration: "Administration",
   audit: "Audit Logs",
 };

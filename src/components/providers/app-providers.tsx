@@ -14,7 +14,7 @@ import { useMockApi } from "@/lib/api/config";
 import { MOCK_TENANTS } from "@/mocks/seed";
 import { useTranslations } from "@/hooks/use-translations";
 
-const PUBLIC_ROUTES = ["/", "/login", "/forgot-password"];
+const PUBLIC_ROUTES = ["/", "/login", "/forgot-password", "/reset-password"];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route);
@@ -61,7 +61,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               ? MOCK_TENANTS.find((t) => t.id === result.user.tenantId)?.name
               : "") ??
             "";
-          setAuth(result.session, result.user, tenantName);
+          setAuth(result.session, result.user, tenantName, result.requiresPasswordChange);
         } else {
           clearAuth();
         }

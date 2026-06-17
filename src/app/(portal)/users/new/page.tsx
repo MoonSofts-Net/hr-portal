@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createUserFormSchema, type CreateUserFormValues } from "@/lib/validation/user";
 import { createUser, getRolesForTenant } from "@/lib/api/users";
+import { getBranches } from "@/lib/api/branches";
 import { useRequestContext } from "@/features/auth/store";
 import { useConfirm } from "@/components/feedback/confirm-provider";
 import { useToast } from "@/components/feedback/toast-provider";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
+import { useTranslations } from "@/hooks/use-translations";
 import type { ApiError } from "@/types";
 
 export default function NewUserPage() {
@@ -24,6 +26,7 @@ export default function NewUserPage() {
   const context = useRequestContext();
   const confirm = useConfirm();
   const toast = useToast();
+  const { t } = useTranslations();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
@@ -37,6 +40,18 @@ export default function NewUserPage() {
     enabled: Boolean(context.tenantId),
   });
 
+  const {
+    data: branchesData,
+    isLoading: branchesLoading,
+    isError: branchesError,
+    error: branchesQueryError,
+  } = useQuery({
+    queryKey: ["branches-select", context.tenantId],
+    queryFn: () => getBranches(context, { activeOnly: true, pageSize: 100 }),
+    enabled: Boolean(context.tenantId),
+  });
+
+  const branches = branchesData?.data ?? [];
   const assignableRoles = roles.filter((r) => !r.isSystem);
 
   const {
@@ -45,14 +60,14 @@ export default function NewUserPage() {
     formState: { errors, isSubmitting },
   } = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserFormSchema),
-    defaultValues: { status: "pending" },
+    defaultValues: { status: "active" },
   });
 
   const onSubmit = async (values: CreateUserFormValues) => {
     const approved = await confirm({
-      title: "Create user?",
-      description: "A new account will be created with the selected role and permissions.",
-      confirmLabel: "Create user",
+      title: t("users.createConfirmTitle"),
+      description: t("users.createConfirmDescription"),
+      confirmLabel: t("users.createConfirmLabel"),
       variant: "success",
       details: `${values.name}\n${values.email}`,
     });
@@ -65,24 +80,24 @@ export default function NewUserPage() {
         email: values.email,
         cpf: values.cpf,
         roleId: values.roleId,
-        password: values.password,
+        branchId: values.branchId,
         department: values.department,
         status: values.status,
       });
       await queryClient.invalidateQueries({ queryKey: ["users", context.tenantId] });
-      toast.success("User created", values.name);
+      toast.success(t("users.created"), values.name);
       router.push(`/users/${user.id}`);
     } catch (err) {
       const apiErr = err as ApiError;
-      const message = apiErr.message ?? "Failed to create user";
+      const message = apiErr.message ?? t("users.createFailed");
       setSubmitError(message);
-      toast.error("Creation failed", message);
+      toast.error(t("users.createFailed"), message);
     }
   };
 
   return (
     <div>
-      <PageHeader title="Create user" description="Add a new user to the tenant" />
+      <PageHeader title={t("users.createTitle")} description={t("users.createDescription")} />
       <Card className="max-w-xl">
         <CardContent className="pt-[24px]">
           {submitError && (
@@ -91,37 +106,29 @@ export default function NewUserPage() {
             </p>
           )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-[16px]">
-            <FormField label="Full name" error={errors.name?.message} required>
+            <FormField label={t("users.fullName")} error={errors.name?.message} required>
               <Input {...register("name")} />
             </FormField>
-            <FormField label="Email" error={errors.email?.message} required>
+            <FormField label={t("users.email")} error={errors.email?.message} required>
               <Input type="email" {...register("email")} />
             </FormField>
-            <FormField label="CPF" error={errors.cpf?.message} required hint="11 digits — formatting optional">
-              <Input {...register("cpf")} inputMode="numeric" placeholder="52998227253 or 529.982.272-53" />
+            <FormField label={t("users.cpf")} error={errors.cpf?.message} required hint={t("users.cpfHint")}>
+              <Input {...register("cpf")} inputMode="numeric" placeholder="52998227253" />
             </FormField>
-            <FormField
-              label="Initial password"
-              error={errors.password?.message}
-              required
-              hint="Minimum 8 characters — user can change after first login"
-            >
-              <Input type="password" autoComplete="new-password" {...register("password")} />
-            </FormField>
-            <FormField label="Role" error={errors.roleId?.message} required>
+            <p className="text-sm text-muted-foreground rounded-md border border-border/60 bg-muted/30 px-[12px] py-[10px]">
+              {t("users.defaultPasswordHint")}
+            </p>
+            <FormField label={t("users.role")} error={errors.roleId?.message} required>
               {rolesError && (
                 <p className="mb-[8px] text-sm text-destructive">
-                  {(rolesQueryError as ApiError)?.message ??
-                    "Could not load roles. Check your permissions and try again."}
+                  {(rolesQueryError as ApiError)?.message ?? t("users.noRoles")}
                 </p>
               )}
               {!rolesLoading && !rolesError && assignableRoles.length === 0 && (
-                <p className="mb-[8px] text-sm text-muted-foreground">
-                  No roles available for this tenant. Ask an administrator to configure roles.
-                </p>
+                <p className="mb-[8px] text-sm text-muted-foreground">{t("users.noRoles")}</p>
               )}
               <Select {...register("roleId")} disabled={rolesLoading || rolesError}>
-                <option value="">Select role</option>
+                <option value="">{t("users.selectRole")}</option>
                 {assignableRoles.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
@@ -129,22 +136,44 @@ export default function NewUserPage() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Department" error={errors.department?.message}>
+            <FormField label={t("users.branch")} error={errors.branchId?.message} required>
+              {branchesError && (
+                <p className="mb-[8px] text-sm text-destructive">
+                  {(branchesQueryError as ApiError)?.message ?? t("users.noBranches")}
+                </p>
+              )}
+              {!branchesLoading && !branchesError && branches.length === 0 && (
+                <p className="mb-[8px] text-sm text-muted-foreground">
+                  {t("users.noBranches")}{" "}
+                  <a href="/admin/branches/new" className="underline">
+                    {t("users.createBranchLink")}
+                  </a>
+                </p>
+              )}
+              <Select {...register("branchId")} disabled={branchesLoading || branchesError}>
+                <option value="">{t("users.selectBranch")}</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.code} — {b.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label={t("users.department")} error={errors.department?.message}>
               <Input {...register("department")} />
             </FormField>
-            <FormField label="Status" error={errors.status?.message} required>
+            <FormField label={t("users.status")} error={errors.status?.message} required>
               <Select {...register("status")}>
-                <option value="pending">Pending (invited)</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="active">{t("users.statusActive")}</option>
+                <option value="inactive">{t("users.statusInactive")}</option>
               </Select>
             </FormField>
             <div className="flex gap-[8px]">
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save user"}
+                {isSubmitting ? t("users.saving") : t("users.save")}
               </Button>
               <Button type="button" variant="outline" onClick={() => router.back()}>
-                Cancel
+                {t("users.cancel")}
               </Button>
             </div>
           </form>

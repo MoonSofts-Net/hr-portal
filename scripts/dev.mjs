@@ -9,10 +9,14 @@ import { spawn, spawnSync } from "child_process";
 import net from "net";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { loadEnvFile } from "../backend/scripts/load-env.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
 const backendDir = join(rootDir, "backend");
+
+loadEnvFile(join(rootDir, ".env"));
+loadEnvFile(join(backendDir, ".env"));
 
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT ?? 3000);
 const API_PORT = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
@@ -168,6 +172,8 @@ async function startAll() {
   spawnService("web", "npm", ["run", "dev:frontend"], rootDir);
 
   await waitForPort(FRONTEND_PORT, "Frontend");
+  log("[dev]", "Warming up frontend (first compile may take ~30s)...");
+  await waitForHttp(`http://127.0.0.1:${FRONTEND_PORT}/login`, "Frontend", 120_000);
   console.log("");
   log("[dev]", "Ready. Open http://localhost:3000/login");
   log("[dev]", "Press Ctrl+C to stop all services.");

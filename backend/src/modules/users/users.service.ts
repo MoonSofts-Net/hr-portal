@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { FieldEncryptionService } from '../../security/field-encryption.service';
@@ -16,6 +17,10 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
+import { BranchesService } from '../branches/branches.service';
+import { EmailService } from '../../integrations/email/email.service';
+import { welcomeEmailHtml } from '../../integrations/resend/email-templates';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const SORT_FIELDS: Record<string, string> = {
   name: 'name',
@@ -32,6 +37,7 @@ const userListSelect = {
   avatarUrl: true,
   createdAt: true,
   updatedAt: true,
+  branch: { select: { id: true, code: true, name: true } },
   employeeProfile: {
     select: {
       department: true,
@@ -53,6 +59,10 @@ export class UsersService {
     private readonly fieldEncryption: FieldEncryptionService,
     private readonly passwordHasher: PasswordHasherService,
     private readonly audit: DomainAuditService,
+    private readonly branches: BranchesService,
+    private readonly email: EmailService,
+    private readonly config: ConfigService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(tenantId: string, query: ListUsersQueryDto) {
@@ -63,6 +73,7 @@ export class UsersService {
       ...(query.department
         ? { employeeProfile: { department: query.department } }
         : {}),
+      ...(query.branchId ? { branchId: query.branchId } : {}),
       ...(query.search
         ? {
             OR: [
@@ -145,16 +156,23 @@ export class UsersService {
       throw new ForbiddenException('Cannot assign system global role to tenant user');
     }
 
-    const passwordHash = await this.passwordHasher.hash(dto.password);
+    await this.branches.ensureAssignableBranch(tenantId, dto.branchId);
+
+    const plainPassword =
+      dto.password?.trim() ||
+      this.config.get<string>('defaultUserPassword', 'Coral@2024');
+    const passwordHash = await this.passwordHasher.hash(plainPassword);
 
     const user = await this.prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
           tenantId,
+          branchId: dto.branchId,
           email,
           name: dto.name,
           passwordHash,
-          status: UserStatus.INVITED,
+          status: UserStatus.ACTIVE,
+          mustChangePassword: true,
           invitedAt: new Date(),
         },
       });
@@ -187,7 +205,47 @@ export class UsersService {
       entityId: user.id,
     });
 
+    void this.sendWelcomeEmail({
+      email,
+      name: dto.name,
+      password: plainPassword,
+    });
+    await this.notifications.notify({
+      tenantId,
+      userId: user.id,
+      type: 'user.created',
+      category: 'users',
+      messageKey: 'notifications.user.created',
+      actorUserId: actorId,
+      metadata: { userId: user.id, roleId: dto.roleId, branchId: dto.branchId },
+      title: 'Conta criada',
+      body: 'Sua conta foi criada e precisa de troca de senha no primeiro acesso.',
+      link: '/change-password',
+      dedupeWindowSeconds: 30,
+    });
+
     return this.findOne(tenantId, user.id);
+  }
+
+  private async sendWelcomeEmail(params: {
+    email: string;
+    name: string;
+    password: string;
+  }) {
+    if (!this.email.isEnabled()) return;
+
+    const appUrl = this.config.get<string>('appUrl', 'http://localhost:3000');
+    await this.email.send({
+      to: params.email,
+      subject: 'Bem-vindo ao Portal RH',
+      html: welcomeEmailHtml({
+        name: params.name,
+        email: params.email,
+        temporaryPassword: params.password,
+        loginUrl: `${appUrl}/login`,
+      }),
+      text: `Bem-vindo ao Portal RH.\n\nE-mail: ${params.email}\nSenha inicial: ${params.password}\n\nAcesse: ${appUrl}/login`,
+    });
   }
 
   async update(tenantId: string, id: string, dto: UpdateUserDto, actorId: string) {
@@ -207,6 +265,10 @@ export class UsersService {
       if (!role || role.isSystem) throw new NotFoundException('Role not assignable');
     }
 
+    if (dto.branchId) {
+      await this.branches.ensureAssignableBranch(tenantId, dto.branchId);
+    }
+
     const passwordHash = dto.password
       ? await this.passwordHasher.hash(dto.password)
       : undefined;
@@ -217,6 +279,7 @@ export class UsersService {
         data: {
           email: dto.email?.trim().toLowerCase(),
           name: dto.name,
+          branchId: dto.branchId,
           ...(passwordHash ? { passwordHash } : {}),
         },
       });
@@ -249,6 +312,28 @@ export class UsersService {
       entityId: id,
     });
 
+    await this.notifications.notify({
+      tenantId,
+      userId: id,
+      type: dto.roleId ? 'user.role_changed' : 'user.updated',
+      category: 'users',
+      messageKey: dto.roleId
+        ? 'notifications.user.roleChanged'
+        : 'notifications.user.updated',
+      actorUserId: actorId,
+      metadata: {
+        userId: id,
+        roleId: dto.roleId,
+        branchId: dto.branchId,
+      },
+      title: dto.roleId ? 'Papel atualizado' : 'Dados atualizados',
+      body: dto.roleId
+        ? 'Seu papel de acesso foi alterado.'
+        : 'Seus dados cadastrais foram atualizados.',
+      link: '/profile',
+      dedupeWindowSeconds: 15,
+    });
+
     return this.findOne(tenantId, id);
   }
 
@@ -272,6 +357,20 @@ export class UsersService {
       targetUserId: id,
       entityId: id,
       metadata: { status },
+    });
+
+    await this.notifications.notify({
+      tenantId,
+      userId: id,
+      type: 'user.status_changed',
+      category: 'users',
+      messageKey: 'notifications.user.statusChanged',
+      actorUserId: actorId,
+      metadata: { userId: id, status },
+      title: 'Status da conta alterado',
+      body: `Seu status de acesso foi atualizado para ${status}.`,
+      link: '/profile',
+      dedupeWindowSeconds: 15,
     });
 
     return ok(this.toListItem(user));
@@ -298,6 +397,7 @@ export class UsersService {
       avatarUrl: user.avatarUrl,
       department: user.employeeProfile?.department,
       jobTitle: user.employeeProfile?.jobTitle,
+      branch: user.branch,
       cpfMasked: user.employeeProfile ? maskCpfFromDigits('00000000000') : undefined,
       role: user.userRoles[0]?.role ?? null,
       createdAt: user.createdAt,

@@ -9,6 +9,7 @@ import { CreateHrRequestDto } from './dto/create-hr-request.dto';
 import { UpdateHrRequestStatusDto } from './dto/update-hr-request-status.dto';
 import { ListHrRequestsQueryDto } from './dto/list-hr-requests-query.dto';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const SORT_FIELDS: Record<string, string> = {
   createdAt: 'createdAt',
@@ -22,6 +23,7 @@ export class HrRequestsService {
     private readonly prisma: PrismaService,
     private readonly audit: DomainAuditService,
     private readonly permissions: PermissionsResolverService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(tenantId: string, query: ListHrRequestsQueryDto, user: AuthenticatedUser) {
@@ -96,17 +98,21 @@ export class HrRequestsService {
         });
       }
 
-      await tx.notification.create({
-        data: {
-          tenantId,
-          userId: user.userId,
-          title: 'Solicitação registrada',
-          body: `Sua solicitação "${dto.subject}" foi criada.`,
-          link: `/requests/${created.id}`,
-        },
-      });
-
       return created;
+    });
+
+    await this.notifications.notify({
+      tenantId,
+      userId: user.userId,
+      type: 'hr.request.created',
+      category: 'hr_requests',
+      messageKey: 'notifications.hrRequest.created',
+      actorUserId: user.userId,
+      metadata: { requestId: request.id, subject: dto.subject },
+      title: 'Solicitação registrada',
+      body: `Sua solicitação "${dto.subject}" foi criada.`,
+      link: `/requests/${request.id}`,
+      dedupeWindowSeconds: 30,
     });
 
     await this.audit.recordEvent('HR_REQUEST_CREATED', {
@@ -154,6 +160,22 @@ export class HrRequestsService {
       metadata: { status: dto.status },
     });
 
+    if (updated.requesterId && updated.requesterId !== user.userId) {
+      await this.notifications.notify({
+        tenantId,
+        userId: updated.requesterId,
+        type: 'hr.request.status_changed',
+        category: 'hr_requests',
+        messageKey: 'notifications.hrRequest.statusChanged',
+        actorUserId: user.userId,
+        metadata: { requestId: id, subject: updated.subject, status: dto.status },
+        title: 'Atualização na sua solicitação',
+        body: `"${updated.subject}" — status: ${dto.status}`,
+        link: `/requests/${id}`,
+        dedupeWindowSeconds: 30,
+      });
+    }
+
     return ok(updated);
   }
 
@@ -185,14 +207,18 @@ export class HrRequestsService {
     const notifyUserId =
       user.userId === request.requesterId ? request.assignedToId : request.requesterId;
     if (notifyUserId) {
-      await this.prisma.notification.create({
-        data: {
-          tenantId,
-          userId: notifyUserId,
-          title: 'Nova mensagem na solicitação',
-          body: request.subject,
-          link: `/requests/${requestId}`,
-        },
+      await this.notifications.notify({
+        tenantId,
+        userId: notifyUserId,
+        type: 'hr.request.message_added',
+        category: 'hr_requests',
+        messageKey: 'notifications.hrRequest.messageAdded',
+        actorUserId: user.userId,
+        metadata: { requestId, subject: request.subject, isInternal },
+        title: 'Nova mensagem na solicitação',
+        body: request.subject,
+        link: `/requests/${requestId}`,
+        dedupeWindowSeconds: 10,
       });
     }
 

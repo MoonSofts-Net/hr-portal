@@ -4,6 +4,8 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SecurityModule } from '../../security/security.module';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
+import { IntegrationsModule } from '../../integrations/integrations.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -15,6 +17,8 @@ import { PermissionsResolverService } from './services/permissions-resolver.serv
   imports: [
     SecurityModule,
     AuditLogsModule,
+    IntegrationsModule,
+    NotificationsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -5,7 +5,10 @@
  * Usage: npm run db:start
  * Safe to re-run: detects an already-running server on the configured port.
  */
+import { loadBackendEnv } from './load-env.mjs';
 import EmbeddedPostgres from 'embedded-postgres';
+
+loadBackendEnv();
 import { existsSync, readFileSync, unlinkSync } from 'fs';
 import net from 'net';
 import { join, dirname } from 'path';

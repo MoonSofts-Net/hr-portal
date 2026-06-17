@@ -8,6 +8,8 @@ import { TokenService } from './services/token.service';
 import { SessionService } from './services/session.service';
 import { PermissionsResolverService } from './services/permissions-resolver.service';
 import { DomainAuditService } from '../audit-logs/domain-audit.service';
+import { EmailService } from '../../integrations/email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -15,8 +17,9 @@ describe('AuthService', () => {
     user: { findFirst: jest.Mock; update: jest.Mock };
     employeeProfile: { findFirst: jest.Mock };
   };
-  let passwordHasher: { verify: jest.Mock };
+  let passwordHasher: { verify: jest.Mock; hash: jest.Mock };
   let audit: { recordEvent: jest.Mock };
+  let notifications: { notify: jest.Mock };
   let tokenService: {
     signAccessToken: jest.Mock;
     signRefreshToken: jest.Mock;
@@ -41,8 +44,9 @@ describe('AuthService', () => {
       user: { findFirst: jest.fn(), update: jest.fn() },
       employeeProfile: { findFirst: jest.fn() },
     };
-    passwordHasher = { verify: jest.fn() };
+    passwordHasher = { verify: jest.fn(), hash: jest.fn().mockResolvedValue('new-hash') };
     audit = { recordEvent: jest.fn() };
+    notifications = { notify: jest.fn() };
     tokenService = {
       signAccessToken: jest.fn().mockResolvedValue('access'),
       signRefreshToken: jest.fn().mockResolvedValue('refresh'),
@@ -62,6 +66,8 @@ describe('AuthService', () => {
       sessionService as unknown as SessionService,
       { resolveForRole: jest.fn().mockResolvedValue(['users.read']) } as unknown as PermissionsResolverService,
       audit as unknown as DomainAuditService,
+      { isEnabled: jest.fn().mockReturnValue(false), send: jest.fn() } as unknown as EmailService,
+      notifications as unknown as NotificationsService,
     );
   });
 
@@ -96,6 +102,34 @@ describe('AuthService', () => {
         tenantId: 'tenant-1',
         actorUserId: 'user-1',
         ipAddress: '127.0.0.1',
+      }),
+    );
+  });
+
+  it('changePassword emits security notification', async () => {
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      passwordHash: 'hash',
+      tenantId: 'tenant-1',
+    });
+    passwordHasher.verify.mockResolvedValue(true);
+    prisma.user.update.mockResolvedValue({ id: 'user-1' });
+
+    const result = await service.changePassword(
+      {
+        userId: 'user-1',
+        homeTenantId: 'tenant-1',
+        activeTenantId: 'tenant-1',
+      } as never,
+      { currentPassword: 'old', newPassword: 'new-secret' },
+    );
+
+    expect(result.mustChangePassword).toBe(false);
+    expect(notifications.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        type: 'auth.password_changed',
       }),
     );
   });

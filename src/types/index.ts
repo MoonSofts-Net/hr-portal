@@ -10,6 +10,29 @@ export interface Tenant {
   isActive: boolean;
 }
 
+export interface Branch {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  legalName?: string;
+  taxId?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  isContracted: boolean;
+  isActive: boolean;
+  userCount?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BranchSummary {
+  id: string;
+  code: string;
+  name: string;
+}
+
 export type PermissionModule =
   | "dashboard"
   | "users"
@@ -17,6 +40,7 @@ export type PermissionModule =
   | "documents"
   | "communication"
   | "point"
+  | "branches"
   | "administration"
   | "audit";
 
@@ -57,6 +81,9 @@ export interface User {
   name: string;
   roleId: string;
   roleName: string;
+  branchId?: string;
+  branchName?: string;
+  branchCode?: string;
   department?: string;
   status: UserStatus;
   avatarUrl?: string;
@@ -257,6 +284,11 @@ export interface Notification {
   id: string;
   tenantId: string;
   userId: string;
+  type: string;
+  category: string;
+  messageKey: string;
+  actorUserId?: string;
+  metadata?: Record<string, unknown>;
   title: string;
   body: string;
   read: boolean;

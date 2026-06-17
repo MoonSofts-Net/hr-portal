@@ -1,4 +1,5 @@
 import { Label } from "@/components/ui/label";
+import { useTranslations } from "@/hooks/use-translations";
 import { cn } from "@/lib/utils";
 
 interface FormFieldProps {
@@ -18,6 +19,10 @@ export function FormField({
   children,
   className,
 }: FormFieldProps) {
+  const { t } = useTranslations();
+  const translatedError =
+    error && error.startsWith("validation.") ? t(error as never) : error;
+
   return (
     <div className={cn("space-y-[6px]", className)}>
       <Label>
@@ -26,7 +31,7 @@ export function FormField({
       </Label>
       {children}
       {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {translatedError && <p className="text-xs text-destructive">{translatedError}</p>}
     </div>
   );
 }

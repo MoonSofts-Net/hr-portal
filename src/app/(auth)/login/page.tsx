@@ -52,7 +52,11 @@ function LoginForm() {
     setError(null);
     try {
       const result = await login(data);
-      setAuth(result.session, result.user, result.tenantName);
+      setAuth(result.session, result.user, result.tenantName, result.requiresPasswordChange);
+      if (result.requiresPasswordChange) {
+        router.push("/change-password");
+        return;
+      }
       const redirect = searchParams.get("redirect") || "/dashboard";
       router.push(redirect);
     } catch (e) {

@@ -12,6 +12,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
+  { labelKey: "nav.profile", href: "/profile", icon: PlatformIcons.users },
   { labelKey: "nav.dashboard", href: "/dashboard", icon: PlatformIcons.dashboard, permission: "dashboard.read" },
   { labelKey: "nav.users", href: "/users", icon: PlatformIcons.users, permission: "users.read" },
   {
@@ -52,6 +53,12 @@ export const NAV_ITEMS: NavItem[] = [
         permission: "admin.settings.update",
       },
       {
+        labelKey: "nav.branches",
+        href: "/admin/branches",
+        icon: PlatformIcons.building,
+        permissions: ["admin.branches.read", "admin.branches.manage"],
+      },
+      {
         labelKey: "nav.settings",
         href: "/admin/settings",
         icon: PlatformIcons.admin,
@@ -75,6 +82,7 @@ export function getVisibleNavItems(permissionIds: string[]): NavItem[] {
 }
 
 export const ROUTE_LABEL_KEYS: Record<string, string> = {
+  profile: "nav.profile",
   dashboard: "nav.dashboard",
   users: "nav.users",
   roles: "nav.roles",
@@ -86,10 +94,13 @@ export const ROUTE_LABEL_KEYS: Record<string, string> = {
   "audit-logs": "nav.auditLogs",
   adjustments: "nav.adjustments",
   companies: "nav.companies",
+  branches: "nav.branches",
   settings: "nav.settings",
 };
 
 export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
+  "/profile": "dashboard.read",
+  "/change-password": "dashboard.read",
   "/dashboard": "dashboard.read",
   "/users": "users.read",
   "/roles": ["admin.roles.manage", "admin.settings.read"],
@@ -100,6 +111,7 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   "/point/adjustments": ["point.read", "point.adjust.request", "point.adjust.approve"],
   "/admin": "admin.settings.read",
   "/admin/companies": "admin.settings.update",
+  "/admin/branches": ["admin.branches.read", "admin.branches.manage"],
   "/admin/settings": "admin.settings.update",
   "/audit-logs": "audit.read",
 };

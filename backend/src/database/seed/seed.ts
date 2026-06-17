@@ -21,7 +21,36 @@ const IDS = {
   userEmployee: 'b0000000-0000-0000-0000-000000000004',
 };
 
-const HR_PERMISSIONS = ALL_PERMISSION_IDS.filter((id) => id !== 'admin.settings.update');
+const HR_PERMISSIONS = ALL_PERMISSION_IDS.filter(
+  (id) => id !== 'admin.settings.update',
+);
+
+const BRANCH_LOCATIONS = [
+  { code: 'LOJA-01', name: 'Recife — Centro', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-02', name: 'Boa Viagem', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-03', name: 'Casa Amarela', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-04', name: 'Pina', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-05', name: 'Olinda — Centro', city: 'Olinda', state: 'PE' },
+  { code: 'LOJA-06', name: 'Jaboatão — Candeias', city: 'Jaboatão dos Guararapes', state: 'PE' },
+  { code: 'LOJA-07', name: 'Paulista — Centro', city: 'Paulista', state: 'PE' },
+  { code: 'LOJA-08', name: 'Camaragibe', city: 'Camaragibe', state: 'PE' },
+  { code: 'LOJA-09', name: 'São Lourenço da Mata', city: 'São Lourenço da Mata', state: 'PE' },
+  { code: 'LOJA-10', name: 'Igarassu', city: 'Igarassu', state: 'PE' },
+  { code: 'LOJA-11', name: 'Abreu e Lima', city: 'Abreu e Lima', state: 'PE' },
+  { code: 'LOJA-12', name: 'Recife — Torre', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-13', name: 'Recife — Graças', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-14', name: 'Recife — Madalena', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-15', name: 'Recife — Espinheiro', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-16', name: 'Jaboatão — Piedade', city: 'Jaboatão dos Guararapes', state: 'PE' },
+  { code: 'LOJA-17', name: 'Olinda — Bairro Novo', city: 'Olinda', state: 'PE' },
+  { code: 'LOJA-18', name: 'Cabo de Santo Agostinho', city: 'Cabo de Santo Agostinho', state: 'PE' },
+  { code: 'LOJA-19', name: 'Recife — Varzea', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-20', name: 'Recife — Afogados', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-21', name: 'Recife — Bongi', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-22', name: 'Recife — Cordeiro', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-23', name: 'Recife — Ilha do Leite', city: 'Recife', state: 'PE' },
+  { code: 'LOJA-24', name: 'Recife — Derby', city: 'Recife', state: 'PE' },
+];
 
 const MANAGER_PERMISSIONS = [
   'dashboard.read',
@@ -97,6 +126,7 @@ async function seedUser(params: {
   name: string;
   roleId: string;
   cpf: string;
+  branchId?: string;
   department?: string;
   jobTitle?: string;
 }) {
@@ -108,12 +138,13 @@ async function seedUser(params: {
     create: {
       id: params.id,
       tenantId: params.tenantId,
+      branchId: params.branchId,
       email: params.email,
       passwordHash,
       name: params.name,
       status: UserStatus.ACTIVE,
     },
-    update: { passwordHash, name: params.name, status: UserStatus.ACTIVE },
+    update: { passwordHash, name: params.name, status: UserStatus.ACTIVE, branchId: params.branchId },
   });
 
   await prisma.employeeProfile.upsert({
@@ -145,6 +176,38 @@ async function seedUser(params: {
   });
 
   return user;
+}
+
+async function seedBranches(tenantId: string) {
+  const branches: { id: string; code: string; name: string }[] = [];
+
+  for (let i = 0; i < BRANCH_LOCATIONS.length; i++) {
+    const loc = BRANCH_LOCATIONS[i];
+    const id = `d0000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`;
+    const branch = await prisma.branch.upsert({
+      where: { tenantId_code: { tenantId, code: loc.code } },
+      create: {
+        id,
+        tenantId,
+        code: loc.code,
+        name: loc.name,
+        city: loc.city,
+        state: loc.state,
+        isContracted: true,
+        isActive: true,
+      },
+      update: {
+        name: loc.name,
+        city: loc.city,
+        state: loc.state,
+        isContracted: true,
+        isActive: true,
+      },
+    });
+    branches.push({ id: branch.id, code: branch.code, name: branch.name });
+  }
+
+  return branches;
 }
 
 async function main() {
@@ -242,6 +305,9 @@ async function main() {
   await linkPermissions(managerRole.id, MANAGER_PERMISSIONS);
   await linkPermissions(employeeRole.id, EMPLOYEE_PERMISSIONS);
 
+  const branches = await seedBranches(tenantMoonsofts.id);
+  const defaultBranchId = branches[0]?.id;
+
   const onboardingRequirements = [
     { code: 'RG', label: 'RG / Identity document', category: 'PERSONAL_DOCUMENT' as const, sortOrder: 1 },
     { code: 'CPF', label: 'CPF', category: 'PERSONAL_DOCUMENT' as const, sortOrder: 2 },
@@ -279,6 +345,7 @@ async function main() {
   await seedUser({
     id: IDS.userHr,
     tenantId: tenantMoonsofts.id,
+    branchId: defaultBranchId,
     email: 'rh@moonsofts.com',
     password: 'rh123',
     name: 'Ana RH',
@@ -291,6 +358,7 @@ async function main() {
   await seedUser({
     id: IDS.userManager,
     tenantId: tenantMoonsofts.id,
+    branchId: branches[1]?.id ?? defaultBranchId,
     email: 'gestor@moonsofts.com',
     password: 'gestor123',
     name: 'Carlos Gestor',
@@ -303,6 +371,7 @@ async function main() {
   const employee = await seedUser({
     id: IDS.userEmployee,
     tenantId: tenantMoonsofts.id,
+    branchId: branches[2]?.id ?? defaultBranchId,
     email: 'colaborador@moonsofts.com',
     password: 'colab123',
     name: 'Diego Colaborador',
@@ -374,7 +443,7 @@ async function main() {
     });
   }
 
-  console.log('Seed completed.');
+  console.log(`Seed completed (${branches.length} branches).`);
 }
 
 main()

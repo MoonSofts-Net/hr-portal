@@ -15,10 +15,14 @@ export class CreateUserDto {
   @IsNotEmpty()
   name!: string;
 
-  @ApiProperty({ minLength: 8 })
+  @ApiPropertyOptional({
+    minLength: 8,
+    description: 'Optional — uses DEFAULT_USER_PASSWORD from server config when omitted',
+  })
+  @IsOptional()
   @IsString()
   @MinLength(8)
-  password!: string;
+  password?: string;
 
   @ApiProperty({ description: 'CPF digits or formatted (000.000.000-00)' })
   @Transform(({ value }) => (typeof value === 'string' ? normalizeCpf(value) : value))
@@ -30,6 +34,10 @@ export class CreateUserDto {
   @ApiProperty({ description: 'Primary role ID' })
   @IsDatabaseUuid()
   roleId!: string;
+
+  @ApiProperty({ description: 'Branch (filial) ID within the company' })
+  @IsDatabaseUuid()
+  branchId!: string;
 
   @ApiPropertyOptional()
   @IsOptional()

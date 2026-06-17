@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { SelectTenantDto } from './dto/select-tenant.dto';
 import { LogoutDto } from './dto/logout.dto';
 
@@ -45,7 +46,7 @@ export class AuthController {
   @SkipAudit()
   @RateLimit({ limit: 5, windowMs: 60_000, keyPrefix: 'auth:forgot-password' })
   @Post('forgot-password')
-  @ApiOperation({ summary: 'Request password reset (placeholder — no email sent in V1)' })
+  @ApiOperation({ summary: 'Request password reset email via Resend' })
   forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
     return this.authService.forgotPassword(dto, { ip: req.ip });
   }
@@ -57,6 +58,17 @@ export class AuthController {
   @ApiOperation({ summary: 'Reset password with token from forgot-password flow' })
   resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
     return this.authService.resetPassword(dto, { ip: req.ip });
+  }
+
+  @Post('change-password')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change password (required on first login when mustChangePassword is set)' })
+  changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.changePassword(user, dto, { ip: req.ip });
   }
 
   @Get('me')

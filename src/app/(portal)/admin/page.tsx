@@ -14,6 +14,14 @@ const LINKS: {
   iconBg: string;
 }[] = [
   {
+    href: "/admin/branches",
+    title: "Branches / Filiais",
+    description: "Manage branches, contracts, and employee associations",
+    icon: PlatformIcons.building,
+    accent: "from-teal-500/10 to-transparent",
+    iconBg: "bg-teal-500/10 text-teal-600",
+  },
+  {
     href: "/admin/companies",
     title: "Companies / Tenants",
     description: "Multi-company SaaS management",
